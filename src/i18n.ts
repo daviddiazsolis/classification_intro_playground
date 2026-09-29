@@ -26,7 +26,7 @@ export const translations: Record<Language, Record<string, string>> = {
     sandboxCTA: 'Open the Evaluation Playground',
 
     xlTitle: 'Excel workbooks',
-    xlSubtitle: 'Three toy workbooks that follow the tabs: every number is a readable formula, and the weights are found live with Solver. Written in Spanish.',
+    xlSubtitle: 'Three toy workbooks that follow the tabs: every number is a readable formula, and the weights are found live with Solver. Each one is available in English and Spanish; the button downloads the version in the language you are reading.',
     xl1Title: 'logistica_01_german_credit.xlsx',
     xl1Desc: 'Base workbook: raw data, transform, scale, the line versus the logistic, threshold and evaluation on one sheet, metrics by threshold with ROC and AUC, cost-optimal threshold.',
     xl2Title: 'logistica_02_regularizacion.xlsx',
@@ -82,7 +82,7 @@ export const translations: Record<Language, Record<string, string>> = {
     sandboxCTA: 'Abrir el Evaluation Playground',
 
     xlTitle: 'Planillas Excel',
-    xlSubtitle: 'Tres planillas de juguete que siguen las pestañas: cada número es una fórmula legible y los pesos se encuentran en vivo con Solver. Disponibles en la carpeta del curso.',
+    xlSubtitle: 'Tres planillas de juguete que siguen las pestañas: cada número es una fórmula legible y los pesos se encuentran en vivo con Solver. Cada una está en español y en inglés; el botón descarga la versión del idioma en que estás leyendo.',
     xl1Title: 'logistica_01_german_credit.xlsx',
     xl1Desc: 'Planilla base: datos originales, transformar, escalar, la recta contra la logística, umbral y evaluación en una misma hoja, métricas según umbral con ROC y AUC, umbral óptimo con costos.',
     xl2Title: 'logistica_02_regularizacion.xlsx',
