@@ -1,0 +1,351 @@
+<div class="wrap">
+<nav class="tabs" id="tabs" aria-label="Topics">
+  <button type="button" data-m="rec"><span>01</span>From the line to the logistic</button>
+  <button type="button" data-m="per"><span>02</span>The loss function</button>
+  <button type="button" data-m="ent"><span>03</span>Training</button>
+  <button type="button" data-m="eva"><span>04</span>Evaluating</button>
+  <button type="button" data-m="roc"><span>05</span>Threshold, ROC and AUC</button>
+  <button type="button" data-m="cos"><span>06</span>Cost-based threshold</button>
+  <button type="button" data-m="reg"><span>07</span>Regularization</button>
+  <button type="button" data-m="bal"><span>08</span>Class imbalance</button>
+  <button type="button" data-m="mue"><span>09</span>Sampling variation</button>
+  <button type="button" data-m="tw"><span>10</span>Taiwan: beyond logistic regression</button>
+</nav>
+
+<!-- ===================== 01 RECTA ===================== -->
+<div class="modelo" id="m-rec">
+<div class="controls">
+  <div class="ctrl" data-pasos="2"><label for="rec-z">Score z: <b id="rec-z-v">1.50</b></label><input type="range" id="rec-z" min="-600" max="600" value="150" style="width:220px"></div>
+  <div class="ctrl" data-pasos="3"><label for="rec-u">Threshold: <b id="rec-u-v">0.50</b></label><input type="range" id="rec-u" min="1" max="99" value="50" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="rec-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="rec-rail"></nav>
+
+<section class="panel" id="rec-s0">
+  <h2>The data: 1,000 customers of a German bank</h2>
+  <p>So far in the course we always predicted a number. Today the question is yes or no: is this customer going to pay back the loan or not? This is called a <b>classification</b> problem, and it is probably the most widespread use of machine learning in finance. We will use a single dataset, real and public, <b>German Credit</b> (Hofmann, 1994): 1,000 consumer loans, of which 300 ended in default. And a single algorithm, logistic regression, from start to finish, so we can learn to evaluate a classifier without having to learn another model at the same time.</p>
+  <p>The preparation is already done (it is the same as in the Excel workbook and the notebook): of the 20 original columns, 9 remain, converted into 4 numeric columns and 14 0/1 columns (each text category becomes a column that equals 1 if the customer is in that category, leaving one category out as the base). The target variable is \(y = 1\) if the customer was a bad payer. The 1,000 rows are split into 700 for <b>training</b> (to learn) and 300 for <b>testing</b> (to measure), at random but keeping the 30% of bad payers in each group, and the four numeric columns are scaled with the training mean and standard deviation.</p>
+  <div class="flow" id="rec-datos"></div>
+  <p class="note" id="rec-datos-nota"></p>
+</section>
+
+<section class="panel" id="rec-s1">
+  <h2>The naive attempt: a linear regression on a yes or a no</h2>
+  <p>The first idea is to use the usual linear regression with \(y = 1\) if the customer did not pay and \(y = 0\) if they paid:</p>
+  <div class="eq"><span class="name">Linear regression on y</span>\[ \hat{y} = \theta_0 + \theta_1 x_1 + \theta_2 x_2 + \dots + \theta_{18} x_{18} \]</div>
+  <p>Here \(x_1, \dots, x_{18}\) are a customer's prepared columns and \(\theta_0, \dots, \theta_{18}\) the weights the model fits by least squares. It half works. A line has no ceiling: for some customers it predicts a negative number and, for an extreme customer, one greater than 1, and neither of them means anything as a probability.</p>
+  <div class="flow" id="rec-lineal"></div>
+  <p class="note" id="rec-lineal-nota"></p>
+</section>
+
+<section class="panel" id="rec-s2">
+  <h2>The logistic function: any score becomes a probability</h2>
+  <p>The solution is more than 70 years old and is called logistic regression (Berkson, 1944). The recipe: build the same linear combination, but instead of reading it directly as the prediction, pass it through a function that squashes it into the range between 0 and 1.</p>
+  <div class="eq"><span class="name">Score and probability</span>\[ z = \theta_0 + \theta_1 x_1 + \dots + \theta_{18} x_{18} \qquad\qquad p = \frac{1}{1 + e^{-z}} \]</div>
+  <p>\(z\) is the customer's <b>score</b>: any number, without limits, that summarizes their risk. \(p\) is the <b>estimated probability</b> that they do not pay. The second formula is the logistic or sigmoid function: with \(z = 0\) it gives \(p = 0.5\); with \(z = 3\) it gives \(0.95\); with \(z = -3\) it gives \(0.05\); it never touches 0 or 1. It is called an activation or scaling function. Move the score with the slider and watch where \(p\) lands. Next to it is its cousin, the probit, which uses the cumulative normal and gives an almost identical curve; the logistic is preferred because its derivative is simpler and because \(z\) turns out to be exactly the log of the odds, \(\ln(p/(1-p))\).</p>
+  <div class="flow" id="rec-sig"></div>
+</section>
+
+<section class="panel" id="rec-s3">
+  <h2>The threshold: collapsing the probability into a decision</h2>
+  <p>With \(p\) in hand, the second piece appears. To decide yes or no we have to collapse the probability: if \(p\) exceeds a <b>threshold</b>, we predict "does not pay"; otherwise, "pays". For now the threshold is 0.5, the obvious value. Here we already use the trained weights (the ones from tab 03) to see how many testing customers get flagged depending on where you put the threshold. Hold on to the question of why 0.5 and not another number: that is the topic of tab 05.</p>
+  <div class="flow" id="rec-umb"></div>
+  <p class="note" id="rec-umb-nota"></p>
+</section>
+<div class="nav"><button type="button" id="rec-prev">Previous</button><button type="button" id="rec-next">Next</button></div>
+</div>
+
+<!-- ===================== 02 PERDIDA ===================== -->
+<div class="modelo" id="m-per">
+<div class="controls">
+  <div class="ctrl" data-pasos="1"><label for="per-p1">Customer 2 (good), p: <b id="per-p1-v">0.80</b></label><input type="range" id="per-p1" min="1" max="99" value="80" style="width:160px"></div>
+  <div class="ctrl" data-pasos="1"><label for="per-p3">Customer 4 (bad), p: <b id="per-p3-v">0.10</b></label><input type="range" id="per-p3" min="1" max="99" value="10" style="width:160px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="per-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="per-rail"></nav>
+
+<section class="panel" id="per-s0">
+  <h2>How a model that predicts probabilities measures its errors</h2>
+  <p>With a line we used the squared error. With probabilities there is something better. If a customer turned out bad (\(y = 1\)) and the model had given them \(p = 0.9\), it was only slightly wrong; if it had given them \(p = 0.1\), it was very wrong. The loss \(-\ln(p)\) captures that: it equals 0.105 in the first case and 2.303 in the second, and it grows without limit as \(p\) approaches 0. For a good customer (\(y = 0\)) the loss is \(-\ln(1 - p)\), the mirror image. Written together, for customer \(i\):</p>
+  <div class="eq"><span class="name">Binary cross-entropy (log loss)</span>\[ \text{loss}_i = -\left[\, y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \,\right] \]</div>
+  <p>The model's <b>cost function</b> is the sum (or the average) of that loss over the training customers, and training means finding the weights \(\theta\) that minimize it. Why the logarithm and not \((y - p)^2\): because the logarithm punishes misplaced confidence. Saying 99% and being wrong costs 4.6; saying 60% and being wrong costs 0.9. A model that minimizes this loss learns not to be more confident than the data justify.</p>
+  <div class="flow" id="per-curva"></div>
+</section>
+
+<section class="panel" id="per-s1">
+  <h2>Four customers, two models</h2>
+  <p>Four customers, two good and two bad. Model A gets two right with confidence and gets two wrong with confidence; model B gets all four right. Move the probabilities of customers 2 and 4 with the sliders and watch how the confident errors take over the total loss: a single customer with \(p = 0.05\) who turned out bad costs more than the other three combined.</p>
+  <div class="flow" id="per-ej"></div>
+  <p class="note" id="per-ej-nota"></p>
+</section>
+<div class="nav"><button type="button" id="per-prev">Previous</button><button type="button" id="per-next">Next</button></div>
+</div>
+
+<!-- ===================== 03 ENTRENAR ===================== -->
+<div class="modelo" id="m-ent">
+<div class="controls">
+  <div class="ctrl" data-pasos="1"><label for="ent-lr">Learning rate: <b id="ent-lr-v">0.10</b></label><input type="range" id="ent-lr" min="1" max="60" value="10" style="width:160px"></div>
+  <div class="ctrl" data-pasos="1"><label>&nbsp;</label><button type="button" id="ent-paso">One step</button></div>
+  <div class="ctrl" data-pasos="1"><label>&nbsp;</label><button type="button" id="ent-100">100 steps</button></div>
+  <div class="ctrl" data-pasos="1"><label>&nbsp;</label><button type="button" id="ent-reset">Back to 0.3</button></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="ent-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="ent-rail"></nav>
+
+<section class="panel" id="ent-s0">
+  <h2>A deliberately bad starting point</h2>
+  <p>In the Excel workbook the weights start at 0.3 across the board, on purpose, and Solver moves them until the sum of losses in training is at its minimum. Here we do the same. With every weight at 0.3, the line \(z\) escapes any reasonable range, the average probability ends up far from the actual rate of 30% and the loss is high. Look at the numbers: they are the starting point of the next tab.</p>
+  <div class="flow" id="ent-ini"></div>
+</section>
+
+<section class="panel" id="ent-s1">
+  <h2>Gradient descent: lowering the loss one step at a time</h2>
+  <p>The cross-entropy of a logistic model has a valuable property: a single minimum. So any method that keeps going down always arrives at the same place. The simplest one is <b>gradient descent</b>: compute in which direction the loss goes up (its gradient) and take a step in the opposite direction. For the logistic model the gradient has a form you can read:</p>
+  <div class="eq"><span class="name">Gradient and descent step</span>\[ \frac{\partial J}{\partial \theta_j} = \frac{1}{n}\sum_{i=1}^{n} (p_i - y_i)\, x_{ij} \qquad\qquad \theta_j \leftarrow \theta_j - \eta \, \frac{\partial J}{\partial \theta_j} \]</div>
+  <p>\(J\) is the average loss in training, \(n = 700\), \(p_i - y_i\) is the error for client \(i\) (positive if the model assigned more risk than the client had) and \(x_{ij}\) is the value of variable \(j\) for that client: the weight of a variable goes down when the clients with a high value of that variable are being overestimated. \(\eta\) (eta) is the <b>learning rate</b>, the size of the step. Take steps with the buttons and watch the loss go down; with a very small rate it moves slowly, with a very large one it overshoots. Solver and scikit-learn use finer methods (Newton, BFGS), but they reach the same minimum.</p>
+  <div class="flow" id="ent-gd"></div>
+  <p class="note" id="ent-gd-nota"></p>
+</section>
+
+<section class="panel" id="ent-s2">
+  <h2>The trained weights and how to read them</h2>
+  <p>These are the weights that scikit-learn finds (and Solver, and gradient descent if you let it run): the average loss in training ends up at 0.5004 and in testing at 0.4691. They are in units of \(z\), that is, of log odds. <code>cta_negativa</code> at 1.55 says that having the checking account in the red multiplies the odds of not paying by \(e^{1.55} \approx 4.7\) relative to having no account (the base category), everything else equal. The negative ones protect: known and high savings, critical history (which in this dataset means "already has other loans and is paying them"), age.</p>
+  <div class="flow" id="ent-pesos"></div>
+</section>
+<div class="nav"><button type="button" id="ent-prev">Previous</button><button type="button" id="ent-next">Next</button></div>
+</div>
+
+<!-- ===================== 04 EVALUAR ===================== -->
+<div class="modelo" id="m-eva">
+<div class="controls">
+  <div class="ctrl" data-pasos="1,2"><label for="eva-u">Threshold: <b id="eva-u-v">0.50</b></label><input type="range" id="eva-u" min="1" max="99" value="50" style="width:220px"></div>
+  <div class="ctrl" data-pasos="1,2"><label>Set</label><div class="seg" id="eva-conj"><button type="button" data-c="s" aria-pressed="true">Testing (300)</button><button type="button" data-c="t" aria-pressed="false">Training (700)</button></div></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="eva-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="eva-rail"></nav>
+
+<section class="panel" id="eva-s0">
+  <h2>Accuracy and what it hides</h2>
+  <p>The starting point is <b>accuracy</b>: what fraction of the clients was correctly classified with the 0.5 threshold. But it hides what matters: in this dataset, a model that said "everyone pays" would get 70% right without having learned anything, and it would not catch a single bad payer. Our model gets 78% right in testing. Is that a lot or a little? With accuracy alone you cannot tell.</p>
+  <div class="flow" id="eva-acc"></div>
+</section>
+
+<section class="panel" id="eva-s1">
+  <h2>The confusion matrix</h2>
+  <p>The matrix separates the four cases. With positive = bad payer (the event we want to detect): <b>TP</b> (true positive): was bad and we flagged them. <b>FP</b> (false positive): was good and we flagged them. <b>TN</b> (true negative): was good and we let them through. <b>FN</b> (false negative): was bad and we let them through. Move the threshold and watch how the 300 testing clients spread across the four cells: lowering the threshold moves clients in the bottom row to the right (more TP, fewer FN) and also in the top row (more FP).</p>
+  <div class="flow" id="eva-mat"></div>
+</section>
+
+<section class="panel" id="eva-s2">
+  <h2>Recall and precision: effectiveness and efficiency</h2>
+  <p>From the matrix come the two metrics you need to know how to read:</p>
+  <div class="eq"><span class="name">The two metrics of the positive class</span>\[ \text{recall} = \frac{TP}{TP + FN} \qquad\qquad \text{precision} = \frac{TP}{TP + FP} \qquad\qquad F_1 = \frac{2 \cdot \text{recall} \cdot \text{precision}}{\text{recall} + \text{precision}} \]</div>
+  <p><b>Recall</b>: of all the bad payers there were, what fraction did I catch. It is a measure of <b>effectiveness</b>. <b>Precision</b>: of all the ones I flagged as bad, what fraction really was. It is a measure of <b>efficiency</b>, because every false flag costs something (a good client rejected, a useless collection call). \(F_1\) is the harmonic mean of the two, a summary for when you do not know which one matters more. Each class has its own recall and precision, as in the scikit-learn classification report; the recall of class 0 is also called specificity. Move the threshold: recall and precision move in opposite directions, and that is the trade-off.</p>
+  <div class="flow" id="eva-rep"></div>
+  <h3>The trade-off depends on the business</h3>
+  <div class="mwrap"><table class="cmp"><tr><th>case</th><th>what a false negative costs (not flagging)</th><th>what a false positive costs (over-flagging)</th><th>what is favored</th></tr>
+  <tr><td>credit risk</td><td>approving someone who does not pay: the principal is lost</td><td>rejecting someone who would have paid: the margin is lost</td><td>recall (effectiveness), with asymmetric costs (tab 06)</td></tr>
+  <tr><td>churn</td><td>not contacting someone who was leaving: the client is lost</td><td>contacting someone who was staying: a call, a discount</td><td>recall, but the retention budget is finite, so precision matters more than it seems</td></tr>
+  <tr><td>fraud</td><td>letting a fraudulent transaction through: the full loss</td><td>blocking a legitimate one: an annoyed honest client</td><td>precision (efficiency) keeps the friction tolerable</td></tr></table></div>
+</section>
+<div class="nav"><button type="button" id="eva-prev">Previous</button><button type="button" id="eva-next">Next</button></div>
+</div>
+
+<!-- ===================== 05 ROC ===================== -->
+<div class="modelo" id="m-roc">
+<div class="controls">
+  <div class="ctrl" data-pasos="0,1"><label for="roc-u">Threshold: <b id="roc-u-v">0.50</b></label><input type="range" id="roc-u" min="0" max="100" value="50" style="width:240px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="roc-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="roc-rail"></nav>
+
+<section class="panel" id="roc-s0">
+  <h2>Why 50% and not some other number</h2>
+  <p>The threshold is not part of the model; it is a decision. The table recomputes the confusion matrix on testing for every threshold between 0 and 1 and shows how recall, precision and \(F_1\) move. Lowering the threshold catches more bad payers (recall goes up) at the cost of flagging more good ones (precision goes down); raising it does the opposite. There is no threshold that improves both at once. Move the slider to highlight a row.</p>
+  <div class="flow" id="roc-tabla"></div>
+</section>
+
+<section class="panel" id="roc-s1">
+  <h2>The ROC curve is that same table drawn</h2>
+  <p>The horizontal axis shows the <b>false positive rate</b> (\(FP / (FP + TN)\): what fraction of the good ones I flagged) and the vertical axis shows <b>recall</b> (also called the true positive rate). Each point is a threshold; walking along the curve is moving the threshold from 1 (nobody flagged, bottom left corner) to 0 (everyone flagged, top right corner). A model that guesses at random follows the diagonal; a perfect one climbs the left edge. Move the threshold and watch the point travel along the curve.</p>
+  <div class="flow" id="roc-curva"></div>
+</section>
+
+<section class="panel" id="roc-s2">
+  <h2>The area under the curve (AUC)</h2>
+  <p>The AUC summarizes how far the curve is from the diagonal. It can be computed as a sum of trapezoids over the 21 points in the table, or exactly by using each of the 300 testing scores as a threshold. A complementary reading worth knowing: the AUC is the probability that, picking a bad payer and a good payer at random, the model assigned more risk to the bad one. It is useful for comparing models without fixing a threshold, but it hides the trade-off: when two ROC curves cross, a single number decides nothing, and you have to look at the curve in the range of thresholds the business is going to use.</p>
+  <div class="flow" id="roc-auc"></div>
+  <p class="note">An honest detail: here the testing AUC (0.822) comes out higher than the training AUC (0.777). That is not the usual case and it does not mean the model generalizes better than what it learned: with 300 testing clients the AUC has a sampling error of several points, and in tab 09 we measure it.</p>
+</section>
+<div class="nav"><button type="button" id="roc-prev">Previous</button><button type="button" id="roc-next">Next</button></div>
+</div>
+
+<!-- ===================== 06 COSTOS ===================== -->
+<div class="modelo" id="m-cos">
+<div class="controls">
+  <div class="ctrl" data-pasos="0,1"><label for="cos-fn">Cost of a false negative (bad payer approved): <b id="cos-fn-v">5</b></label><input type="range" id="cos-fn" min="1" max="20" value="5" style="width:180px"></div>
+  <div class="ctrl" data-pasos="0,1"><label for="cos-fp">Cost of a false positive (good payer rejected): <b id="cos-fp-v">1</b></label><input type="range" id="cos-fp" min="1" max="20" value="1" style="width:180px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="cos-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="cos-rail"></nav>
+
+<section class="panel" id="cos-s0">
+  <h2>The formula: if the probabilities are honest, the threshold is computed</h2>
+  <p>If I know the cost of each outcome, the threshold stops being a debate and becomes a calculation. The German Credit dataset itself comes with a cost matrix: approving a bad payer (\(FN\)) costs 5, rejecting a good payer (\(FP\)) costs 1, and getting it right costs nothing. For a client with probability \(p\) of not paying, flagging them costs on average \((1 - p)\, c_{FP}\) (if they actually paid) and not flagging them costs \(p \, c_{FN}\) (if they actually did not pay). It pays to flag them when \(p \, c_{FN} > (1 - p)\, c_{FP}\):</p>
+  <div class="eq"><span class="name">Optimal threshold (with calibrated probabilities)</span>\[ p^* = \frac{c_{FP}}{c_{FP} + c_{FN}} \]</div>
+  <p>Notice that no data appears: the rule is the same for any model and any sample, and it is exact under a single condition, that \(p\) be a well <b>calibrated</b> probability, that is, that among the clients the model assigns \(p = 0.3\), 30% actually do not pay. Move the costs and watch the threshold.</p>
+  <div class="flow" id="cos-form"></div>
+</section>
+
+<section class="panel" id="cos-s1">
+  <h2>The table: walk through the thresholds and add up the cost that occurred</h2>
+  <p>The other way is by enumeration: for each threshold, count the \(FP\) and the \(FN\) in testing, multiply by their costs and keep the minimum. It does not assume calibration and works with any cost structure, even if the cost depends on the client. In exchange, it optimizes against a sample of 300, so it inherits its noise: the valley around the minimum is flat, and with another sample the minimum jumps.</p>
+  <div class="flow" id="cos-tabla"></div>
+  <p class="note" id="cos-tabla-nota"></p>
+</section>
+
+<section class="panel" id="cos-s2">
+  <h2>When the table and the formula do not agree</h2>
+  <p>The two possible causes are independent and leave different traces. <b>Poor calibration</b> is a problem of the model: if clients with \(p = 0.2\) actually stop paying 30% of the time, the formula points to the wrong place and the table corrects it. It is diagnosed by grouping testing into quintiles of \(p\) and comparing the average \(p\) of each group with the actual fraction of bad payers, which is the table below. <b>Sampling variation</b> is a problem of the data: with 300 clients, moving the threshold from 0.25 to 0.30 changes the classification of about 15 of them, and the cost of those 15 depends on who ended up in the sample. It is diagnosed by resampling, which is what tab 09 does.</p>
+  <div class="flow" id="cos-cal"></div>
+  <p class="note">With 60 clients per group, differences of 0.05 between the two columns are noise. What can be seen is that the model is a little optimistic in group 3 (it assigns 0.29 where reality is 0.18): an unregularized logistic tends to be somewhat more confident than it should be at the extremes, and that is part of the reason the table does not land on 0.167.</p>
+</section>
+<div class="nav"><button type="button" id="cos-prev">Previous</button><button type="button" id="cos-next">Next</button></div>
+</div>
+
+<!-- ===================== 07 REGULARIZACION ===================== -->
+<div class="modelo" id="m-reg">
+<div class="controls">
+  <div class="ctrl" data-pasos="1,2"><label>Type</label><div class="seg" id="reg-tipo"><button type="button" data-t="l2" aria-pressed="true">Ridge (L2)</button><button type="button" data-t="l1" aria-pressed="false">Lasso (L1)</button><button type="button" data-t="en" aria-pressed="false">Elastic net</button></div></div>
+  <div class="ctrl" data-pasos="1,2"><label for="reg-lam">λ: <b id="reg-lam-v">10</b></label><input type="range" id="reg-lam" min="0" max="6" value="3" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="reg-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="reg-rail"></nav>
+
+<section class="panel" id="reg-s0">
+  <h2>Charging the model for the size of the weights</h2>
+  <p>The idea comes from the linear regression classes: when a model is free to move many weights, it tends to fit the noise in training, and one way to hold it back is to add to the cost function a term that grows with the size of the weights. With the logistic it is just as easy:</p>
+  <div class="eq"><span class="name">Cost function with penalty</span>\[ J(\theta) = \sum_{i} \text{loss}_i + \underbrace{\tfrac{\lambda}{2} \sum_j \theta_j^2}_{\text{ridge (L2)}} \quad\text{or}\quad \underbrace{\lambda \sum_j |\theta_j|}_{\text{lasso (L1)}} \quad\text{or}\quad \underbrace{\lambda \Big[\alpha \sum_j |\theta_j| + \tfrac{1-\alpha}{2}\sum_j \theta_j^2\Big]}_{\text{elastic net}} \]</div>
+  <p>\(\lambda\) (lambda) says how much size costs; with \(\lambda = 0\) we are back at the model from tab 03. The intercept \(\theta_0\) is left out: it says nothing about any variable. <b>Ridge</b> shrinks all the weights toward zero, the large ones more, but none reaches zero. <b>Lasso</b> also shrinks, but leaves weights exactly at zero: it eliminates variables. <b>Elastic net</b> mixes the two, with \(\alpha\) the L1 fraction. In scikit-learn the parameter is \(C = 1/\lambda\). The weights in this tab were computed in Python for each \(\lambda\); the evaluation in testing is computed here, live.</p>
+</section>
+
+<section class="panel" id="reg-s1">
+  <h2>The weights as a function of λ</h2>
+  <p>Choose the type and move \(\lambda\). With ridge all the weights approach zero without reaching it; with lasso they drop to zero one at a time (the variable stops being used). The chart draws the path of each weight as \(\lambda\) grows: it is the classic regularization chart, and it reads from left to right as "which variable survives the longest".</p>
+  <div class="flow" id="reg-pesos"></div>
+</section>
+
+<section class="panel" id="reg-s2">
+  <h2>What it does on this dataset, stated plainly</h2>
+  <p>The loss in training rises with \(\lambda\) (necessarily: the model has less freedom) and the loss in testing also rises, instead of falling. The testing AUC holds up to \(\lambda = 10\) and then drops. That is, on this dataset <b>regularizing does not improve prediction</b>: with 700 clients and 18 variables, the unregularized model was not overfitting; there was nothing to hold back. What regularization does deliver here is a smaller model (lasso with \(\lambda = 10\) switches off 7 of the 18 variables and loses one hundredth of AUC) and weights that are more stable under changes of sample. When it does improve testing: when there are many weights relative to the rows, or high-degree polynomials. Tab 10 shows it with numbers.</p>
+  <div class="flow" id="reg-eval"></div>
+</section>
+<div class="nav"><button type="button" id="reg-prev">Previous</button><button type="button" id="reg-next">Next</button></div>
+</div>
+
+<!-- ===================== 08 DESBALANCEO ===================== -->
+<div class="modelo" id="m-bal">
+<div class="controls">
+  <div class="ctrl" data-pasos="1,2"><label>Method</label><div class="seg" id="bal-met"><button type="button" data-b="base" aria-pressed="true">Unbalanced</button><button type="button" data-b="cw" aria-pressed="false">Class weights</button><button type="button" data-b="sub" aria-pressed="false">Undersampling</button><button type="button" data-b="over" aria-pressed="false">Oversampling</button><button type="button" data-b="smote" aria-pressed="false">SMOTE</button></div></div>
+  <div class="ctrl" data-pasos="2"><label for="bal-u">Threshold of the unbalanced model: <b id="bal-u-v">0.50</b></label><input type="range" id="bal-u" min="1" max="99" value="50" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="bal-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="bal-rail"></nav>
+
+<section class="panel" id="bal-s0">
+  <h2>What class imbalance causes</h2>
+  <p>In German Credit, 30% of the clients are bad payers. Cross-entropy adds up each client's error equally, so the model cares more about getting the 490 good ones in training right than the 210 bad ones: that is why the recall of class 0 is 0.87 and that of class 1, which is the one that matters, is 0.57. On more imbalanced datasets (fraud with 1% of cases) the effect is worse: the model learns to always say "no" and gets 99% accuracy. One more thing to keep at hand: the model's average \(p\) in testing is 0.33, close to the actual rate of 0.30. That means the probabilities are <b>calibrated</b>, and it is something the balancing methods are going to break.</p>
+  <div class="flow" id="bal-prob"></div>
+</section>
+
+<section class="panel" id="bal-s1">
+  <h2>The four corrections</h2>
+  <p>The solutions change one of two things: how much each client weighs in the cost function, or which clients enter training. <b>Class weights</b>: the loss of each row is multiplied by a weight that depends on its class, typically \(n / (2 \, n_{clase})\) so that the two classes add up to the same (1.667 for the bad ones and 0.714 for the good ones). <b>Undersampling</b>: good payers are thrown out at random until they match the bad ones (210 and 210), and training is done with fewer rows. <b>Oversampling</b>: the rows of the minority class are repeated; in the cost function it is identical to an integer weight. <b>SMOTE</b> (Chawla et al., 2002): it does not repeat, it invents. It takes a bad payer, finds its nearest neighbors among the bad payers, and creates a synthetic client at a random point on the segment joining them, \(x_{nuevo} = x_a + u \,(x_b - x_a)\). Everything is done only on training; testing keeps its 300 real clients. Choose a method and look at its matrix and its report in testing (the weights of each variant come from Python; the evaluation is computed here).</p>
+  <div class="flow" id="bal-met-out"></div>
+</section>
+
+<section class="panel" id="bal-s2">
+  <h2>Balancing and moving the threshold are two roads to the same place</h2>
+  <p>The four methods raise the recall of class 1 from 0.57 to between 0.83 and 0.87 and lower the precision from 0.65 to between 0.50 and 0.56: none creates information, all of them move the operating point. The AUC barely changes, because it depends neither on the threshold nor on the balancing. Now move the threshold of the <b>unbalanced</b> model down to 0.30 and compare it with class weights: recall 0.856 and precision 0.513 versus 0.856 and 0.527. For a logistic, weighting the classes shifts the line in a way almost equivalent to moving the threshold. The difference is that balancing shifts the probabilities (the average \(p\) rises from 0.33 to 0.48 with an actual rate of 0.30) and the threshold does not. When balancing is warranted: when the minority class is so scarce that the model does not even learn to tell it apart, or when the algorithm does not deliver a probability that can be thresholded.</p>
+  <div class="flow" id="bal-cmp"></div>
+</section>
+<div class="nav"><button type="button" id="bal-prev">Previous</button><button type="button" id="bal-next">Next</button></div>
+</div>
+
+<!-- ===================== 09 VARIACION MUESTRAL ===================== -->
+<div class="modelo" id="m-mue">
+<div class="controls">
+  <div class="ctrl" data-pasos="0"><label>&nbsp;</label><button type="button" id="mue-otra">Another split</button></div>
+  <div class="ctrl" data-pasos="0"><label>&nbsp;</label><button type="button" id="mue-diez">Ten more splits</button></div>
+  <div class="ctrl" data-pasos="2"><label>&nbsp;</label><button type="button" id="mue-boot">Another resample</button></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="mue-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="mue-rail"></nav>
+
+<section class="panel" id="mue-s0">
+  <h2>If the bank had drawn another 300 customers</h2>
+  <p>Everything above was measured on a testing sample of 300 customers. If the bank had drawn another 300, would the AUC still be 0.82 and the recall 0.57? The most direct way to answer is to do it: repeat the training/testing split with another seed, retrain (here, live, with Newton's method) and measure. Press the button and watch how it changes. That is called <b>sampling variation</b>, and it is the reason everything that follows exists.</p>
+  <div class="flow" id="mue-part"></div>
+  <p class="note" id="mue-part-nota"></p>
+</section>
+
+<section class="panel" id="mue-s1">
+  <h2>Cross-validation: use each customer to measure exactly once</h2>
+  <p>Repeating random splits wastes data: each customer ends up in testing many times and other times never. <b>Cross-validation</b> with \(k\) folds tidies up the idea: divide training into \(k\) equal parts, train on \(k - 1\) and measure on the one left out, rotate \(k\) times, and average. The spread across folds is the measure of uncertainty. Besides estimating performance, it is the honest way to <b>choose</b> things (the threshold, the \(\lambda\), the variables) looking only at training, so that testing stays untouched for the final verdict. Choosing the threshold by looking at testing, as we did in tab 06 to explain the idea, is a mild form of overfitting.</p>
+  <div class="flow" id="mue-cv"></div>
+  <p class="note" id="mue-cv-nota"></p>
+</section>
+
+<section class="panel" id="mue-s2">
+  <h2>Bootstrap confidence intervals</h2>
+  <p>To put an error bar on the testing metric without leaving testing, we use the <b>bootstrap</b>: resample the 300 customers with replacement (some appear twice, others never), recompute the metric, and repeat many times. The 2.5 and 97.5 percentiles of those metrics are a 95% confidence interval. It is the simplest and most general tool there is for this: it works for the AUC, the recall, the cost or the optimal threshold, with no formulas. Here 500 resamples are run each time you press the button.</p>
+  <div class="flow" id="mue-bs"></div>
+  <p class="note" id="mue-bs-nota"></p>
+</section>
+<div class="nav"><button type="button" id="mue-prev">Previous</button><button type="button" id="mue-next">Next</button></div>
+</div>
+
+<!-- ===================== 10 TAIWAN ===================== -->
+<div class="modelo" id="m-tw">
+<div class="controls">
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="tw-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="tw-rail"></nav>
+
+<section class="panel" id="tw-s0">
+  <h2>Another dataset, another question: are there models that beat logistic regression?</h2>
+  <p>Everything above was with 1,000 German customers, where a straight line was enough. This tab changes the dataset: 30,000 credit card customers of a Taiwanese bank (Yeh and Lien, 2009), with six months of history of delays, bills and payments, and 22% stopped paying the following month. And it changes the question: are there models that beat logistic regression, and why? Everything in this tab is computed in Python (notebook 06 reproduces it in full); here the results are shown and each model is explained from scratch.</p>
+  <p>The variable that will matter most is <code>atraso_sep</code>, the payment status of the most recent month: negative or zero values mean paid on time, 1 means one month of delay, 2 two months, and so on. Seventy percent for training (21,000 customers) and thirty for measuring (9,000), stratified. With 9,000 testing customers the bootstrap intervals are narrow (roughly 0.013 of AUC), and hundredths are already real differences.</p>
+  <div class="flow" id="tw-datos"></div>
+</section>
+
+<section class="panel" id="tw-s1">
+  <h2>Polynomials: where regularization does matter (sometimes)</h2>
+  <p>Logistic regression assumes that each variable always pushes risk in the same direction and at the same rate, and that the variables do not interact. One way to relax that without changing the model is to add columns: the square of each variable and the product of each pair. With 23 variables that gives 299 columns. Logistic regression is still a straight line, but in 299 dimensions, and that line can draw curves and crossings in the original 23.</p>
+  <p>Two readings of the numbers. Degree 2 beats the straight line by 0.035 of AUC: in this dataset <b>there is something nonlinear to find</b>. And with 21,000 customers not even 299 columns overfit much: regularization gains 0.002. But with the same degree 2 model trained on only 1,000 customers, the version with no brake gets almost all of training right and collapses on testing (0.63), while the regularized one generalizes (0.72). Regularization is insurance against having more weights than information; its value depends on that ratio, not on the model.</p>
+  <div class="flow" id="tw-poly"></div>
+</section>
+
+<section class="panel" id="tw-s2">
+  <h2>Decision trees, from scratch</h2>
+  <p>A <b>decision tree</b> is a sequence of yes or no questions about the variables. It starts with all customers at the root and looks for the question that best separates those who pay from those who do not; it splits the customers into two groups, and in each group it again looks for the best question, until it reaches groups that are small or pure enough. Each final group (<b>leaf</b>) predicts the fraction of customers within it who did not pay. How it chooses the question: it tries every variable and every cut, and keeps the one that most reduces the <b>impurity</b> of the two groups (the Gini index, \(2p(1-p)\), which is 0 if the group is all one class and 0.5 if it is half and half). There are no weights, no straight line, no need to scale.</p>
+  <p>Two consequences. A tree draws <b>steps</b>, never ramps: within each leaf the risk is constant. And a <b>deep tree memorizes</b>: with no limit it gets 100% of training right and 0.61 of AUC on testing. The maximum depth is the brake, and it is chosen with cross-validation. The tree of depth 2 already tells the story: the first question is about the September delay, and the cut falls between 1 and 2 months.</p>
+  <div class="flow" id="tw-arbol"></div>
+</section>
+
+<section class="panel" id="tw-s3">
+  <h2>Ensembles: many trees are worth more than one</h2>
+  <p>An <b>ensemble</b> combines the predictions of many models. It is the intuition of asking twenty appraisers for the price of a house: each has their quirks, but if the quirks are different they cancel out when averaged. <b>Random forest</b>: hundreds of deep trees, each on a different sample of training drawn at random with replacement and looking at only a subset of variables in each question, averaged. Each tree memorizes; the average of many that memorized different things does not. <b>Gradient boosting</b>: small trees in sequence, each trained to correct the errors (residuals) left by the previous ones, added up with a small factor called the learning rate. It is the model that wins almost every competition with tabular data (XGBoost and LightGBM are fast versions of this idea), and the only one of the two that can overfit if given too many rounds.</p>
+  <p>The comparison below is the honest one: each model with its AUC in training and testing, its bootstrap interval, and the paired differences (in each resample the AUC of the two models is computed on the same customers and subtracted; if the interval of the difference does not contain zero, the difference is real). Plus 5-fold cross-validation.</p>
+  <div class="flow" id="tw-ens"></div>
+</section>
+
+<section class="panel" id="tw-s4">
+  <h2>What boosting found that logistic regression could not see</h2>
+  <p>Let us take <code>atraso_sep</code> and compare, for each value, what percentage of those customers actually did not pay and what average risk each model assigned them. Among customers paying on time, default hovers around 13 to 16%, almost flat. With one month of delay it jumps to 33%. With two months it jumps to 68%, and stays there. It is a <b>staircase with two steps</b>, not a ramp. Linear logistic regression cannot draw a staircase: since \(z\) is linear in the delay, it raises the risk at the same rate for each month, and gets it wrong at both ends. The degree 2 version curves the ramp but does not make a step. Boosting reproduces each step, because a tree does exactly that: it asks "delay greater than or equal to 2?" and assigns a different risk to each side.</p>
+  <div class="flow" id="tw-esc"></div>
+  <p class="note">An AUC is not a decision. To use the winner you have to set the threshold with costs, as in tab 06, and check the calibration: with \(c_{FN} = 4\) and \(c_{FP} = 1\), the formula says 0.20 and the table over 9,000 customers also gives 0.20 for boosting (which is well calibrated) and 0.25 for logistic regression (which spreads out as a ramp what reality concentrates in a step). Notebook 06 has that full closing.</p>
+</section>
+<div class="nav"><button type="button" id="tw-prev">Previous</button><button type="button" id="tw-next">Next</button></div>
+</div>
+</div>

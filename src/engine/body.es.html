@@ -1,0 +1,351 @@
+<div class="wrap">
+<nav class="tabs" id="tabs" aria-label="Temas">
+  <button type="button" data-m="rec"><span>01</span>De la recta a la logística</button>
+  <button type="button" data-m="per"><span>02</span>La función de pérdida</button>
+  <button type="button" data-m="ent"><span>03</span>Entrenar</button>
+  <button type="button" data-m="eva"><span>04</span>Evaluar</button>
+  <button type="button" data-m="roc"><span>05</span>El umbral, ROC y AUC</button>
+  <button type="button" data-m="cos"><span>06</span>Umbral con costos</button>
+  <button type="button" data-m="reg"><span>07</span>Regularización</button>
+  <button type="button" data-m="bal"><span>08</span>Desbalanceo</button>
+  <button type="button" data-m="mue"><span>09</span>Variación muestral</button>
+  <button type="button" data-m="tw"><span>10</span>Taiwán: más allá de la logística</button>
+</nav>
+
+<!-- ===================== 01 RECTA ===================== -->
+<div class="modelo" id="m-rec">
+<div class="controls">
+  <div class="ctrl" data-pasos="2"><label for="rec-z">Puntaje z: <b id="rec-z-v">1,50</b></label><input type="range" id="rec-z" min="-600" max="600" value="150" style="width:220px"></div>
+  <div class="ctrl" data-pasos="3"><label for="rec-u">Umbral: <b id="rec-u-v">0,50</b></label><input type="range" id="rec-u" min="1" max="99" value="50" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="rec-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="rec-rail"></nav>
+
+<section class="panel" id="rec-s0">
+  <h2>Los datos: 1.000 clientes de un banco alemán</h2>
+  <p>Hasta ahora, en el curso, siempre predijimos un número. Hoy la pregunta es de sí o no: ¿este cliente va a pagar su crédito o no? Se llama un problema de <b>clasificación</b>, y es probablemente el uso más extendido del machine learning en finanzas. Vamos a usar una sola base, real y pública, <b>German Credit</b> (Hofmann, 1994): 1.000 créditos de consumo, de los cuales 300 terminaron impagos. Y un solo algoritmo, la regresión logística, de principio a fin, para aprender a evaluar un clasificador sin tener que aprender otro modelo al mismo tiempo.</p>
+  <p>La preparación ya está hecha (es la misma del Excel y del notebook): de las 20 columnas originales quedaron 9, convertidas en 4 numéricas y 14 columnas 0/1 (cada categoría de texto pasa a ser una columna que vale 1 si el cliente está en esa categoría, dejando una categoría fuera como base). La variable objetivo es \(y = 1\) si el cliente fue mal pagador. Las 1.000 filas están separadas en 700 de <b>training</b> (para aprender) y 300 de <b>testing</b> (para medir), al azar pero manteniendo el 30% de malos pagadores en cada grupo, y las cuatro numéricas están escaladas con el promedio y la desviación de training.</p>
+  <div class="flow" id="rec-datos"></div>
+  <p class="note" id="rec-datos-nota"></p>
+</section>
+
+<section class="panel" id="rec-s1">
+  <h2>El intento ingenuo: una regresión lineal sobre un sí o un no</h2>
+  <p>La primera idea es usar la regresión lineal de siempre con \(y = 1\) si el cliente no pagó y \(y = 0\) si pagó:</p>
+  <div class="eq"><span class="name">Regresión lineal sobre y</span>\[ \hat{y} = \theta_0 + \theta_1 x_1 + \theta_2 x_2 + \dots + \theta_{18} x_{18} \]</div>
+  <p>Aquí \(x_1, \dots, x_{18}\) son las columnas preparadas de un cliente y \(\theta_0, \dots, \theta_{18}\) los pesos que el modelo ajusta por mínimos cuadrados. Funciona a medias. Una recta no tiene tope: para algunos clientes predice un número negativo y, para un cliente extremo, uno mayor que 1, y ninguno de los dos significa nada como probabilidad.</p>
+  <div class="flow" id="rec-lineal"></div>
+  <p class="note" id="rec-lineal-nota"></p>
+</section>
+
+<section class="panel" id="rec-s2">
+  <h2>La función logística: cualquier puntaje se convierte en una probabilidad</h2>
+  <p>La solución tiene más de 70 años y se llama regresión logística (Berkson, 1944). La receta: se arma la misma combinación lineal, pero en vez de leerla directo como predicción, se la pasa por una función que la aplasta al rango entre 0 y 1.</p>
+  <div class="eq"><span class="name">Puntaje y probabilidad</span>\[ z = \theta_0 + \theta_1 x_1 + \dots + \theta_{18} x_{18} \qquad\qquad p = \frac{1}{1 + e^{-z}} \]</div>
+  <p>\(z\) es el <b>puntaje</b> del cliente: un número cualquiera, sin límites, que resume su riesgo. \(p\) es la <b>probabilidad estimada</b> de que no pague. La segunda fórmula es la función logística o sigmoide: con \(z = 0\) da \(p = 0{,}5\); con \(z = 3\) da \(0{,}95\); con \(z = -3\) da \(0{,}05\); nunca toca 0 ni 1. Se le llama función de activación o de escalamiento. Mueve el puntaje con el deslizador y mira dónde cae \(p\). Al lado está su prima, la probit, que usa la normal acumulada y da una curva casi idéntica; la logística se prefiere porque su derivada es más simple y porque \(z\) resulta ser exactamente el logaritmo de las chances, \(\ln(p/(1-p))\).</p>
+  <div class="flow" id="rec-sig"></div>
+</section>
+
+<section class="panel" id="rec-s3">
+  <h2>El umbral: colapsar la probabilidad en una decisión</h2>
+  <p>Con \(p\) en mano aparece la segunda pieza. Para decidir sí o no hay que colapsar la probabilidad: si \(p\) supera un <b>umbral</b>, predecimos "no paga"; si no, "paga". Por ahora el umbral es 0,5, el valor obvio. Aquí ya usamos los pesos entrenados (los de la pestaña 03) para ver cuántos clientes de testing quedan marcados según dónde pongas el umbral. Guarda la pregunta de por qué 0,5 y no otro número: es el tema de la pestaña 05.</p>
+  <div class="flow" id="rec-umb"></div>
+  <p class="note" id="rec-umb-nota"></p>
+</section>
+<div class="nav"><button type="button" id="rec-prev">Anterior</button><button type="button" id="rec-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 02 PERDIDA ===================== -->
+<div class="modelo" id="m-per">
+<div class="controls">
+  <div class="ctrl" data-pasos="1"><label for="per-p1">Cliente 2 (bueno), p: <b id="per-p1-v">0,80</b></label><input type="range" id="per-p1" min="1" max="99" value="80" style="width:160px"></div>
+  <div class="ctrl" data-pasos="1"><label for="per-p3">Cliente 4 (malo), p: <b id="per-p3-v">0,10</b></label><input type="range" id="per-p3" min="1" max="99" value="10" style="width:160px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="per-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="per-rail"></nav>
+
+<section class="panel" id="per-s0">
+  <h2>Cómo mide sus errores un modelo que predice probabilidades</h2>
+  <p>Con una recta usábamos el error cuadrático. Con probabilidades hay algo mejor. Si un cliente resultó malo (\(y = 1\)) y el modelo le había dado \(p = 0{,}9\), se equivocó poco; si le había dado \(p = 0{,}1\), se equivocó mucho. La pérdida \(-\ln(p)\) captura eso: vale 0,105 en el primer caso y 2,303 en el segundo, y crece sin límite a medida que \(p\) se acerca a 0. Para un cliente bueno (\(y = 0\)) la pérdida es \(-\ln(1 - p)\), la imagen espejo. Escritas juntas, para el cliente \(i\):</p>
+  <div class="eq"><span class="name">Entropía cruzada binaria (log loss)</span>\[ \text{pérdida}_i = -\left[\, y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \,\right] \]</div>
+  <p>La <b>función de costo</b> del modelo es la suma (o el promedio) de esa pérdida sobre los clientes de training, y entrenar es encontrar los pesos \(\theta\) que la minimizan. Por qué el logaritmo y no \((y - p)^2\): porque el logaritmo castiga la seguridad equivocada. Decir 99% y fallar cuesta 4,6; decir 60% y fallar cuesta 0,9. Un modelo que minimiza esta pérdida aprende a no ser más seguro de lo que los datos justifican.</p>
+  <div class="flow" id="per-curva"></div>
+</section>
+
+<section class="panel" id="per-s1">
+  <h2>Cuatro clientes, dos modelos</h2>
+  <p>Cuatro clientes, dos buenos y dos malos. El modelo A acierta a dos con confianza y falla a dos con confianza; el modelo B acierta a los cuatro. Mueve las probabilidades de los clientes 2 y 4 con los deslizadores y mira cómo la pérdida total se la llevan los errores confiados: un solo cliente con \(p = 0{,}05\) que resultó malo cuesta más que los otros tres juntos.</p>
+  <div class="flow" id="per-ej"></div>
+  <p class="note" id="per-ej-nota"></p>
+</section>
+<div class="nav"><button type="button" id="per-prev">Anterior</button><button type="button" id="per-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 03 ENTRENAR ===================== -->
+<div class="modelo" id="m-ent">
+<div class="controls">
+  <div class="ctrl" data-pasos="1"><label for="ent-lr">Tasa de aprendizaje: <b id="ent-lr-v">0,10</b></label><input type="range" id="ent-lr" min="1" max="60" value="10" style="width:160px"></div>
+  <div class="ctrl" data-pasos="1"><label>&nbsp;</label><button type="button" id="ent-paso">Un paso</button></div>
+  <div class="ctrl" data-pasos="1"><label>&nbsp;</label><button type="button" id="ent-100">100 pasos</button></div>
+  <div class="ctrl" data-pasos="1"><label>&nbsp;</label><button type="button" id="ent-reset">Volver a 0,3</button></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="ent-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="ent-rail"></nav>
+
+<section class="panel" id="ent-s0">
+  <h2>Un punto de partida deliberadamente malo</h2>
+  <p>En el Excel los pesos parten en 0,3 parejo, a propósito, y Solver los mueve hasta que la suma de pérdidas en training es mínima. Aquí hacemos lo mismo. Con todos los pesos en 0,3, la recta \(z\) se escapa de cualquier rango razonable, la probabilidad promedio queda lejos de la tasa real de 30% y la pérdida es alta. Mira los números: son el punto de partida de la pestaña siguiente.</p>
+  <div class="flow" id="ent-ini"></div>
+</section>
+
+<section class="panel" id="ent-s1">
+  <h2>Descenso de gradiente: bajar la pérdida un paso a la vez</h2>
+  <p>La entropía cruzada de una logística tiene una propiedad valiosa: un solo mínimo. Así que cualquier método que baje siempre llega al mismo lugar. El más simple es el <b>descenso de gradiente</b>: calcular en qué dirección sube la pérdida (su gradiente) y dar un paso en la dirección contraria. Para la logística el gradiente tiene una forma que se puede leer:</p>
+  <div class="eq"><span class="name">Gradiente y paso de descenso</span>\[ \frac{\partial J}{\partial \theta_j} = \frac{1}{n}\sum_{i=1}^{n} (p_i - y_i)\, x_{ij} \qquad\qquad \theta_j \leftarrow \theta_j - \eta \, \frac{\partial J}{\partial \theta_j} \]</div>
+  <p>\(J\) es la pérdida promedio en training, \(n = 700\), \(p_i - y_i\) es el error del cliente \(i\) (positivo si el modelo le puso más riesgo del que tenía) y \(x_{ij}\) el valor de la variable \(j\) para ese cliente: el peso de una variable baja cuando los clientes con esa variable alta están siendo sobreestimados. \(\eta\) (eta) es la <b>tasa de aprendizaje</b>, el tamaño del paso. Da pasos con los botones y mira la pérdida bajar; con una tasa muy chica avanza lento, con una muy grande se pasa de largo. Solver y scikit-learn usan métodos más finos (Newton, BFGS), pero llegan al mismo mínimo.</p>
+  <div class="flow" id="ent-gd"></div>
+  <p class="note" id="ent-gd-nota"></p>
+</section>
+
+<section class="panel" id="ent-s2">
+  <h2>Los pesos entrenados y cómo leerlos</h2>
+  <p>Estos son los pesos que encuentra scikit-learn (y Solver, y el descenso de gradiente si lo dejas correr): la pérdida promedio en training queda en 0,5004 y en testing en 0,4691. Están en unidades de \(z\), es decir, de logaritmo de chances. <code>cta_negativa</code> con 1,55 dice que tener la cuenta corriente en rojo multiplica las chances de no pagar por \(e^{1{,}55} \approx 4{,}7\) respecto de no tener cuenta (la categoría base), con todo lo demás igual. Los negativos protegen: ahorro conocido y alto, historial crítico (que en esta base significa "ya tiene otros créditos y los está pagando"), edad.</p>
+  <div class="flow" id="ent-pesos"></div>
+</section>
+<div class="nav"><button type="button" id="ent-prev">Anterior</button><button type="button" id="ent-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 04 EVALUAR ===================== -->
+<div class="modelo" id="m-eva">
+<div class="controls">
+  <div class="ctrl" data-pasos="1,2"><label for="eva-u">Umbral: <b id="eva-u-v">0,50</b></label><input type="range" id="eva-u" min="1" max="99" value="50" style="width:220px"></div>
+  <div class="ctrl" data-pasos="1,2"><label>Conjunto</label><div class="seg" id="eva-conj"><button type="button" data-c="s" aria-pressed="true">Testing (300)</button><button type="button" data-c="t" aria-pressed="false">Training (700)</button></div></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="eva-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="eva-rail"></nav>
+
+<section class="panel" id="eva-s0">
+  <h2>El acierto y lo que esconde</h2>
+  <p>El punto de partida es el <b>acierto</b> (accuracy): qué fracción de los clientes quedó bien clasificada con el umbral de 0,5. Pero esconde lo que importa: en esta base, un modelo que dijera "todos pagan" acertaría el 70% sin haber aprendido nada, y no atraparía a ningún mal pagador. Nuestro modelo acierta 78% en testing. ¿Es mucho o poco? Con solo el acierto no se sabe.</p>
+  <div class="flow" id="eva-acc"></div>
+</section>
+
+<section class="panel" id="eva-s1">
+  <h2>La matriz de confusión</h2>
+  <p>La matriz separa los cuatro casos. Con positivo = mal pagador (el evento que queremos detectar): <b>TP</b> (verdadero positivo): era malo y lo marcamos. <b>FP</b> (falso positivo): era bueno y lo marcamos. <b>TN</b> (verdadero negativo): era bueno y lo dejamos pasar. <b>FN</b> (falso negativo): era malo y lo dejamos pasar. Mueve el umbral y mira cómo se reparten los 300 clientes de testing entre las cuatro celdas: bajar el umbral traslada clientes de la fila de abajo hacia la derecha (más TP, menos FN) y también de la fila de arriba (más FP).</p>
+  <div class="flow" id="eva-mat"></div>
+</section>
+
+<section class="panel" id="eva-s2">
+  <h2>Recall y precision: eficacia y eficiencia</h2>
+  <p>De la matriz salen las dos métricas que hay que saber leer:</p>
+  <div class="eq"><span class="name">Las dos métricas de la clase positiva</span>\[ \text{recall} = \frac{TP}{TP + FN} \qquad\qquad \text{precision} = \frac{TP}{TP + FP} \qquad\qquad F_1 = \frac{2 \cdot \text{recall} \cdot \text{precision}}{\text{recall} + \text{precision}} \]</div>
+  <p><b>Recall</b>: de todos los malos pagadores que había, qué fracción atrapé. Es una medida de <b>eficacia</b>. <b>Precision</b>: de todos los que marqué como malos, qué fracción lo era de verdad. Es una medida de <b>eficiencia</b>, porque cada marca en falso cuesta (un buen cliente rechazado, una llamada de cobranza inútil). \(F_1\) es el promedio armónico de las dos, un resumen cuando no se sabe cuál importa más. Cada clase tiene sus propios recall y precision, como en el reporte de clasificación de scikit-learn; el recall de la clase 0 también se llama especificidad. Mueve el umbral: recall y precision se mueven en direcciones opuestas, y eso es el trade-off.</p>
+  <div class="flow" id="eva-rep"></div>
+  <h3>El trade-off según el negocio</h3>
+  <div class="mwrap"><table class="cmp"><tr><th>caso</th><th>qué cuesta un falso negativo (no marcar)</th><th>qué cuesta un falso positivo (marcar de más)</th><th>qué se privilegia</th></tr>
+  <tr><td>riesgo de crédito</td><td>aprobar a quien no paga: se pierde el capital</td><td>rechazar a quien pagaba: se pierde el margen</td><td>recall (eficacia), con costos asimétricos (pestaña 06)</td></tr>
+  <tr><td>churn</td><td>no contactar a quien se iba: se pierde el cliente</td><td>contactar a quien se quedaba: una llamada, un descuento</td><td>recall, pero el presupuesto de retención es finito, así que precision importa más de lo que parece</td></tr>
+  <tr><td>fraude</td><td>dejar pasar una operación fraudulenta: la pérdida completa</td><td>bloquear una legítima: un cliente honesto molesto</td><td>precision (eficiencia) mantiene tolerable la fricción</td></tr></table></div>
+</section>
+<div class="nav"><button type="button" id="eva-prev">Anterior</button><button type="button" id="eva-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 05 ROC ===================== -->
+<div class="modelo" id="m-roc">
+<div class="controls">
+  <div class="ctrl" data-pasos="0,1"><label for="roc-u">Umbral: <b id="roc-u-v">0,50</b></label><input type="range" id="roc-u" min="0" max="100" value="50" style="width:240px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="roc-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="roc-rail"></nav>
+
+<section class="panel" id="roc-s0">
+  <h2>Por qué 50% y no otro número</h2>
+  <p>El umbral no es parte del modelo; es una decisión. La tabla recalcula la matriz de confusión sobre testing para cada umbral entre 0 y 1 y muestra cómo se mueven recall, precision y \(F_1\). Bajar el umbral atrapa más malos pagadores (sube recall) a costa de marcar más buenos (baja precision); subirlo hace lo contrario. No hay umbral que mejore las dos a la vez. Mueve el deslizador para resaltar una fila.</p>
+  <div class="flow" id="roc-tabla"></div>
+</section>
+
+<section class="panel" id="roc-s1">
+  <h2>La curva ROC es esa misma tabla dibujada</h2>
+  <p>En el eje horizontal va la <b>tasa de falsos positivos</b> (\(FP / (FP + TN)\): qué fracción de los buenos marqué) y en el vertical el <b>recall</b> (también llamado tasa de verdaderos positivos). Cada punto es un umbral; recorrer la curva es mover el umbral desde 1 (nadie marcado, esquina inferior izquierda) hasta 0 (todos marcados, esquina superior derecha). Un modelo que adivina al azar sigue la diagonal; uno perfecto sube por el borde izquierdo. Mueve el umbral y mira el punto viajar por la curva.</p>
+  <div class="flow" id="roc-curva"></div>
+</section>
+
+<section class="panel" id="roc-s2">
+  <h2>El área bajo la curva (AUC)</h2>
+  <p>El AUC resume qué tan lejos de la diagonal está la curva. Se puede calcular como suma de trapecios sobre los 21 puntos de la tabla, o de forma exacta usando cada uno de los 300 scores de testing como umbral. Una lectura complementaria que conviene conocer: el AUC es la probabilidad de que, tomando al azar un mal pagador y un buen pagador, el modelo le haya asignado más riesgo al malo. Sirve para comparar modelos sin fijar umbral, pero esconde el trade-off: cuando dos curvas ROC se cruzan, un solo número no decide nada, y hay que mirar la curva en la zona de umbrales que el negocio va a usar.</p>
+  <div class="flow" id="roc-auc"></div>
+  <p class="note">Un detalle honesto: aquí el AUC de testing (0,822) sale mayor que el de training (0,777). No es lo habitual y no significa que el modelo generalice mejor de lo que aprendió: con 300 clientes de testing el AUC tiene un error muestral de varios puntos, y en la pestaña 09 lo medimos.</p>
+</section>
+<div class="nav"><button type="button" id="roc-prev">Anterior</button><button type="button" id="roc-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 06 COSTOS ===================== -->
+<div class="modelo" id="m-cos">
+<div class="controls">
+  <div class="ctrl" data-pasos="0,1"><label for="cos-fn">Costo de un falso negativo (mal pagador aprobado): <b id="cos-fn-v">5</b></label><input type="range" id="cos-fn" min="1" max="20" value="5" style="width:180px"></div>
+  <div class="ctrl" data-pasos="0,1"><label for="cos-fp">Costo de un falso positivo (buen pagador rechazado): <b id="cos-fp-v">1</b></label><input type="range" id="cos-fp" min="1" max="20" value="1" style="width:180px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="cos-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="cos-rail"></nav>
+
+<section class="panel" id="cos-s0">
+  <h2>La fórmula: si las probabilidades son honestas, el umbral se calcula</h2>
+  <p>Si conozco el costo de cada resultado, el umbral deja de ser una discusión y pasa a ser un cálculo. La propia base German Credit trae una matriz de costos: aprobar a un mal pagador (\(FN\)) cuesta 5, rechazar a un buen pagador (\(FP\)) cuesta 1, y acertar no cuesta nada. Para un cliente con probabilidad \(p\) de no pagar, marcarlo cuesta en promedio \((1 - p)\, c_{FP}\) (si en realidad pagaba) y no marcarlo cuesta \(p \, c_{FN}\) (si en realidad no pagaba). Conviene marcarlo cuando \(p \, c_{FN} > (1 - p)\, c_{FP}\):</p>
+  <div class="eq"><span class="name">Umbral óptimo (con probabilidades calibradas)</span>\[ p^* = \frac{c_{FP}}{c_{FP} + c_{FN}} \]</div>
+  <p>Fíjate en que no aparece ningún dato: la regla es la misma para cualquier modelo y cualquier muestra, y es exacta bajo una sola condición, que \(p\) sea una probabilidad bien <b>calibrada</b>, o sea, que de los clientes a los que el modelo les da \(p = 0{,}3\) efectivamente no pague el 30%. Mueve los costos y mira el umbral.</p>
+  <div class="flow" id="cos-form"></div>
+</section>
+
+<section class="panel" id="cos-s1">
+  <h2>La tabla: recorrer los umbrales y sumar el costo que pasó</h2>
+  <p>La otra forma es por extensión: para cada umbral, contar los \(FP\) y los \(FN\) en testing, multiplicar por sus costos y quedarse con el mínimo. No supone calibración y sirve con cualquier estructura de costos, incluso si el costo depende del cliente. A cambio, optimiza contra una muestra de 300, así que hereda su ruido: el valle alrededor del mínimo es plano, y con otra muestra el mínimo salta.</p>
+  <div class="flow" id="cos-tabla"></div>
+  <p class="note" id="cos-tabla-nota"></p>
+</section>
+
+<section class="panel" id="cos-s2">
+  <h2>Cuando la tabla y la fórmula no coinciden</h2>
+  <p>Las dos causas posibles son independientes y dejan huellas distintas. <b>Mala calibración</b> es un problema del modelo: si a los clientes con \(p = 0{,}2\) en realidad les deja de pagar el 30%, la fórmula apunta al lugar equivocado y la tabla lo corrige. Se diagnostica agrupando testing en quintiles de \(p\) y comparando el \(p\) promedio de cada grupo con la fracción real de malos pagadores, que es la tabla de abajo. <b>Variación muestral</b> es un problema de los datos: con 300 clientes, mover el umbral de 0,25 a 0,30 cambia la clasificación de unos 15, y el costo de esos 15 depende de quién cayó en la muestra. Se diagnostica remuestreando, que es lo que hace la pestaña 09.</p>
+  <div class="flow" id="cos-cal"></div>
+  <p class="note">Con 60 clientes por grupo, diferencias de 0,05 entre las dos columnas son ruido. Lo que sí se ve es que el modelo es un poco optimista en el grupo 3 (asigna 0,29 donde la realidad es 0,18): una logística sin regularizar tiende a ser algo más segura de la cuenta en los extremos, y esa es parte de la razón por la que la tabla no cae en 0,167.</p>
+</section>
+<div class="nav"><button type="button" id="cos-prev">Anterior</button><button type="button" id="cos-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 07 REGULARIZACION ===================== -->
+<div class="modelo" id="m-reg">
+<div class="controls">
+  <div class="ctrl" data-pasos="1,2"><label>Tipo</label><div class="seg" id="reg-tipo"><button type="button" data-t="l2" aria-pressed="true">Ridge (L2)</button><button type="button" data-t="l1" aria-pressed="false">Lasso (L1)</button><button type="button" data-t="en" aria-pressed="false">Elastic net</button></div></div>
+  <div class="ctrl" data-pasos="1,2"><label for="reg-lam">λ: <b id="reg-lam-v">10</b></label><input type="range" id="reg-lam" min="0" max="6" value="3" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="reg-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="reg-rail"></nav>
+
+<section class="panel" id="reg-s0">
+  <h2>Cobrarle al modelo por el tamaño de los pesos</h2>
+  <p>La idea viene de las clases de regresión lineal: cuando un modelo tiene libertad para mover muchos pesos, tiende a ajustarse al ruido de training, y una forma de frenarlo es agregar a la función de costo un término que crece con el tamaño de los pesos. Con la logística es igual de fácil:</p>
+  <div class="eq"><span class="name">Función de costo con penalización</span>\[ J(\theta) = \sum_{i} \text{pérdida}_i + \underbrace{\tfrac{\lambda}{2} \sum_j \theta_j^2}_{\text{ridge (L2)}} \quad\text{o}\quad \underbrace{\lambda \sum_j |\theta_j|}_{\text{lasso (L1)}} \quad\text{o}\quad \underbrace{\lambda \Big[\alpha \sum_j |\theta_j| + \tfrac{1-\alpha}{2}\sum_j \theta_j^2\Big]}_{\text{elastic net}} \]</div>
+  <p>\(\lambda\) (lambda) dice cuánto cuesta el tamaño; con \(\lambda = 0\) estamos en el modelo de la pestaña 03. El intercepto \(\theta_0\) queda fuera: no dice nada sobre ninguna variable. <b>Ridge</b> encoge todos los pesos hacia cero, más a los grandes, pero ninguno llega a cero. <b>Lasso</b> también encoge, pero deja pesos exactamente en cero: elimina variables. <b>Elastic net</b> mezcla, con \(\alpha\) la fracción L1. En scikit-learn el parámetro es \(C = 1/\lambda\). Los pesos de esta pestaña se calcularon en Python para cada \(\lambda\); la evaluación en testing sí se calcula aquí en vivo.</p>
+</section>
+
+<section class="panel" id="reg-s1">
+  <h2>Los pesos según λ</h2>
+  <p>Elige el tipo y mueve \(\lambda\). Con ridge todos los pesos se acercan a cero sin llegar; con lasso van cayendo en cero de a uno (la variable deja de usarse). El gráfico dibuja la trayectoria de cada peso a medida que \(\lambda\) crece: es el gráfico clásico de regularización, y se lee de izquierda a derecha como "qué variable sobrevive más tiempo".</p>
+  <div class="flow" id="reg-pesos"></div>
+</section>
+
+<section class="panel" id="reg-s2">
+  <h2>Lo que hace en esta base, dicho tal cual</h2>
+  <p>La pérdida en training sube con \(\lambda\) (obligatorio: el modelo tiene menos libertad) y la pérdida en testing también sube, en vez de bajar. El AUC de testing se mantiene hasta \(\lambda = 10\) y después cae. Es decir, en esta base <b>regularizar no mejora la predicción</b>: con 700 clientes y 18 variables, el modelo sin regularizar no estaba sobreajustando; no había nada que frenar. Lo que la regularización sí entrega aquí es un modelo más chico (lasso con \(\lambda = 10\) apaga 7 de las 18 variables y pierde una centésima de AUC) y pesos más estables ante cambios de muestra. Cuándo sí mejora testing: cuando hay muchos pesos respecto de las filas, o polinomios de grado alto. La pestaña 10 lo muestra con números.</p>
+  <div class="flow" id="reg-eval"></div>
+</section>
+<div class="nav"><button type="button" id="reg-prev">Anterior</button><button type="button" id="reg-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 08 DESBALANCEO ===================== -->
+<div class="modelo" id="m-bal">
+<div class="controls">
+  <div class="ctrl" data-pasos="1,2"><label>Método</label><div class="seg" id="bal-met"><button type="button" data-b="base" aria-pressed="true">Sin balancear</button><button type="button" data-b="cw" aria-pressed="false">Class weights</button><button type="button" data-b="sub" aria-pressed="false">Submuestreo</button><button type="button" data-b="over" aria-pressed="false">Sobremuestreo</button><button type="button" data-b="smote" aria-pressed="false">SMOTE</button></div></div>
+  <div class="ctrl" data-pasos="2"><label for="bal-u">Umbral del modelo sin balancear: <b id="bal-u-v">0,50</b></label><input type="range" id="bal-u" min="1" max="99" value="50" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="bal-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="bal-rail"></nav>
+
+<section class="panel" id="bal-s0">
+  <h2>Qué provoca el desbalanceo</h2>
+  <p>En German Credit el 30% de los clientes es mal pagador. La entropía cruzada suma el error de cada cliente por igual, así que el modelo se preocupa más de acertarle a los 490 buenos de training que a los 210 malos: por eso el recall de la clase 0 es 0,87 y el de la clase 1, que es la que importa, 0,57. En bases más desbalanceadas (fraude con 1% de casos) el efecto es peor: el modelo aprende a decir "no" siempre y acierta el 99%. Una cosa más para tener a mano: la \(p\) promedio del modelo en testing es 0,33, cerca de la tasa real de 0,30. Eso significa que las probabilidades están <b>calibradas</b>, y es algo que los métodos de balanceo van a romper.</p>
+  <div class="flow" id="bal-prob"></div>
+</section>
+
+<section class="panel" id="bal-s1">
+  <h2>Las cuatro correcciones</h2>
+  <p>Las soluciones cambian una de dos cosas: cuánto pesa cada cliente en la función de costo, o qué clientes entran en training. <b>Class weights</b>: la pérdida de cada fila se multiplica por un peso que depende de su clase, típicamente \(n / (2 \, n_{clase})\) para que las dos clases sumen lo mismo (1,667 para los malos y 0,714 para los buenos). <b>Submuestreo</b>: se tiran al azar buenos pagadores hasta igualar a los malos (210 y 210), y se entrena con menos filas. <b>Sobremuestreo</b>: se repiten las filas de la clase minoritaria; en la función de costo es idéntico a un peso entero. <b>SMOTE</b> (Chawla y otros, 2002): no repite, inventa. Toma un mal pagador, busca sus vecinos más cercanos entre los malos pagadores, y crea un cliente sintético en un punto al azar del segmento que los une, \(x_{nuevo} = x_a + u \,(x_b - x_a)\). Todo se hace solo sobre training; testing se queda con sus 300 clientes reales. Elige un método y mira su matriz y su reporte en testing (los pesos de cada variante vienen de Python; la evaluación se calcula aquí).</p>
+  <div class="flow" id="bal-met-out"></div>
+</section>
+
+<section class="panel" id="bal-s2">
+  <h2>Balancear y mover el umbral son dos caminos al mismo lugar</h2>
+  <p>Los cuatro métodos suben el recall de la clase 1 de 0,57 a entre 0,83 y 0,87 y bajan la precision de 0,65 a entre 0,50 y 0,56: ninguno crea información, todos mueven el punto de operación. El AUC casi no cambia, porque no depende del umbral ni del balanceo. Ahora mueve el umbral del modelo <b>sin balancear</b> hasta 0,30 y compáralo con class weights: recall 0,856 y precision 0,513 contra 0,856 y 0,527. Para una logística, ponderar las clases desplaza la recta de forma casi equivalente a mover el umbral. La diferencia es que el balanceo desplaza las probabilidades (la \(p\) promedio sube de 0,33 a 0,48 con una tasa real de 0,30) y el umbral no. Cuándo sí balancear: cuando la minoritaria es tan escasa que el modelo ni siquiera aprende a distinguirla, o cuando el algoritmo no entrega una probabilidad que se pueda umbralizar.</p>
+  <div class="flow" id="bal-cmp"></div>
+</section>
+<div class="nav"><button type="button" id="bal-prev">Anterior</button><button type="button" id="bal-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 09 VARIACION MUESTRAL ===================== -->
+<div class="modelo" id="m-mue">
+<div class="controls">
+  <div class="ctrl" data-pasos="0"><label>&nbsp;</label><button type="button" id="mue-otra">Otra partición</button></div>
+  <div class="ctrl" data-pasos="0"><label>&nbsp;</label><button type="button" id="mue-diez">Diez particiones más</button></div>
+  <div class="ctrl" data-pasos="2"><label>&nbsp;</label><button type="button" id="mue-boot">Otro remuestreo</button></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="mue-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="mue-rail"></nav>
+
+<section class="panel" id="mue-s0">
+  <h2>Si el banco hubiera sacado otros 300 clientes</h2>
+  <p>Todo lo anterior se midió en una muestra de testing de 300 clientes. Si el banco hubiera sacado otros 300, ¿el AUC seguiría siendo 0,82 y el recall 0,57? La forma más directa de responder es hacerlo: repetir la partición training/testing con otra semilla, reentrenar (aquí, en vivo, con el método de Newton) y medir. Aprieta el botón y mira cómo cambia. Eso se llama <b>variación muestral</b>, y es la razón de existir de todo lo que sigue.</p>
+  <div class="flow" id="mue-part"></div>
+  <p class="note" id="mue-part-nota"></p>
+</section>
+
+<section class="panel" id="mue-s1">
+  <h2>Validación cruzada: usar cada cliente para medir exactamente una vez</h2>
+  <p>Repetir particiones al azar desperdicia datos: cada cliente sale muchas veces en testing y otras ninguna. La <b>validación cruzada</b> de \(k\) pliegues ordena la idea: divide training en \(k\) partes iguales, entrena con \(k - 1\) y mide en la que quedó fuera, rota \(k\) veces, y promedia. La desviación entre pliegues es la medida de incertidumbre. Además de estimar el desempeño, es la forma honesta de <b>elegir</b> cosas (el umbral, la \(\lambda\), las variables) mirando solo training, para que testing quede intacto para el veredicto final. Elegir el umbral mirando testing, como hicimos en la pestaña 06 para explicar la idea, es una forma suave de sobreajuste.</p>
+  <div class="flow" id="mue-cv"></div>
+  <p class="note" id="mue-cv-nota"></p>
+</section>
+
+<section class="panel" id="mue-s2">
+  <h2>Intervalos de confianza por bootstrap</h2>
+  <p>Para poner una barra de error a la métrica de testing sin salir de testing, se usa el <b>bootstrap</b>: remuestrear los 300 clientes con reposición (algunos salen dos veces, otros ninguna), recalcular la métrica, y repetir muchas veces. Los percentiles 2,5 y 97,5 de esas métricas son un intervalo de confianza del 95%. Es la herramienta más simple y más general que existe para esto: sirve para el AUC, el recall, el costo o el umbral óptimo, sin fórmulas. Aquí se hacen 500 remuestreos cada vez que aprietas el botón.</p>
+  <div class="flow" id="mue-bs"></div>
+  <p class="note" id="mue-bs-nota"></p>
+</section>
+<div class="nav"><button type="button" id="mue-prev">Anterior</button><button type="button" id="mue-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 10 TAIWAN ===================== -->
+<div class="modelo" id="m-tw">
+<div class="controls">
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="tw-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="tw-rail"></nav>
+
+<section class="panel" id="tw-s0">
+  <h2>Otra base, otra pregunta: ¿hay modelos que le ganen a la logística?</h2>
+  <p>Todo lo anterior fue con 1.000 clientes alemanes, donde una recta era suficiente. Esta pestaña cambia de base: 30.000 clientes de tarjeta de crédito de un banco taiwanés (Yeh y Lien, 2009), con seis meses de historia de atrasos, facturas y pagos, y el 22% dejó de pagar al mes siguiente. Y cambia la pregunta: ¿hay modelos que le ganen a la logística, y por qué? Todo lo de esta pestaña está calculado en Python (el notebook 06 lo reproduce completo); aquí se muestran los resultados y se explica cada modelo desde cero.</p>
+  <p>La variable que va a importar más es <code>atraso_sep</code>, el estado de pago del mes más reciente: valores negativos o cero significan que pagó al día, 1 significa un mes de atraso, 2 dos meses, y así. Setenta por ciento para entrenar (21.000 clientes) y treinta para medir (9.000), estratificado. Con 9.000 clientes de testing los intervalos por bootstrap son angostos (más o menos 0,013 de AUC), y centésimas ya son diferencias reales.</p>
+  <div class="flow" id="tw-datos"></div>
+</section>
+
+<section class="panel" id="tw-s1">
+  <h2>Polinomios: donde la regularización sí importa (a veces)</h2>
+  <p>La logística supone que cada variable empuja el riesgo siempre en la misma dirección y al mismo ritmo, y que las variables no interactúan. Una forma de relajar eso sin cambiar de modelo es agregar columnas: el cuadrado de cada variable y el producto de cada par. Con 23 variables salen 299 columnas. La logística sigue siendo una recta, pero en 299 dimensiones, y esa recta puede dibujar curvas y cruces en las 23 originales.</p>
+  <p>Dos lecturas de los números. El grado 2 le gana a la recta por 0,035 de AUC: en esta base <b>hay algo no lineal que encontrar</b>. Y con 21.000 clientes ni siquiera 299 columnas sobreajustan mucho: la regularización gana 0,002. Pero con el mismo modelo de grado 2 entrenado con solo 1.000 clientes, la versión sin freno acierta casi todo training y se desploma en testing (0,63), y la regularizada generaliza (0,72). La regularización es un seguro contra tener más pesos que información; su valor depende de esa razón, no del modelo.</p>
+  <div class="flow" id="tw-poly"></div>
+</section>
+
+<section class="panel" id="tw-s2">
+  <h2>Árboles de decisión, desde cero</h2>
+  <p>Un <b>árbol de decisión</b> es una secuencia de preguntas de sí o no sobre las variables. Empieza con todos los clientes en la raíz y busca la pregunta que mejor separa a los que pagan de los que no; parte a los clientes en dos grupos, y en cada grupo vuelve a buscar la mejor pregunta, hasta llegar a grupos pequeños o suficientemente puros. Cada grupo final (<b>hoja</b>) predice la fracción de clientes que no pagó dentro de él. Cómo elige la pregunta: prueba todas las variables y todos los cortes, y se queda con el que más reduce la <b>impureza</b> de los dos grupos (el índice de Gini, \(2p(1-p)\), que vale 0 si el grupo es todo de una clase y 0,5 si está mitad y mitad). No hay pesos, no hay recta, no hay que escalar.</p>
+  <p>Dos consecuencias. Un árbol dibuja <b>escalones</b>, nunca rampas: dentro de cada hoja el riesgo es constante. Y un árbol <b>profundo memoriza</b>: sin límite acierta el 100% de training y 0,61 de AUC en testing. La profundidad máxima es el freno, y se elige con validación cruzada. El árbol de profundidad 2 ya cuenta la historia: la primera pregunta es sobre el atraso de septiembre, y el corte cae entre 1 y 2 meses.</p>
+  <div class="flow" id="tw-arbol"></div>
+</section>
+
+<section class="panel" id="tw-s3">
+  <h2>Ensambles: muchos árboles valen más que uno</h2>
+  <p>Un <b>ensamble</b> combina las predicciones de muchos modelos. Es la intuición de pedirle a veinte tasadores el precio de una casa: cada uno tiene sus manías, pero si las manías son distintas se cancelan al promediar. <b>Random forest</b>: cientos de árboles profundos, cada uno sobre una muestra distinta de training tomada al azar con reposición y mirando en cada pregunta solo un subconjunto de variables, promediados. Cada árbol memoriza; el promedio de muchos que memorizaron cosas distintas no. <b>Gradient boosting</b>: árboles chicos en secuencia, cada uno entrenado para corregir los errores (residuos) que dejaron los anteriores, sumados con un factor pequeño llamado tasa de aprendizaje. Es el modelo que gana casi todas las competencias con datos tabulares (XGBoost y LightGBM son versiones rápidas de esta idea), y el único de los dos que puede sobreajustar si se le dan demasiadas rondas.</p>
+  <p>La comparación de abajo es la honesta: cada modelo con su AUC en training y testing, su intervalo por bootstrap, y las diferencias pareadas (en cada remuestra se calcula el AUC de los dos modelos sobre los mismos clientes y se resta; si el intervalo de la diferencia no contiene el cero, la diferencia es real). Más la validación cruzada de 5 pliegues.</p>
+  <div class="flow" id="tw-ens"></div>
+</section>
+
+<section class="panel" id="tw-s4">
+  <h2>Qué encontró el boosting que la logística no podía ver</h2>
+  <p>Tomemos <code>atraso_sep</code> y comparemos, para cada valor, qué porcentaje de esos clientes realmente no pagó y qué riesgo promedio les asignó cada modelo. Entre los clientes al día el impago ronda el 13 a 16%, casi plano. Con un mes de atraso salta a 33%. Con dos meses salta a 68%, y de ahí se queda. Es una <b>escalera con dos peldaños</b>, no una rampa. La logística lineal no puede dibujar una escalera: como \(z\) es lineal en el atraso, sube el riesgo al mismo ritmo por cada mes, y se equivoca en las dos puntas. La de grado 2 curva la rampa pero no hace un escalón. El boosting reproduce cada peldaño, porque un árbol hace justamente eso: pregunta "¿atraso mayor o igual a 2?" y asigna un riesgo distinto a cada lado.</p>
+  <div class="flow" id="tw-esc"></div>
+  <p class="note">Un AUC no es una decisión. Para usar el ganador hay que fijar el umbral con costos, como en la pestaña 06, y revisar la calibración: con \(c_{FN} = 4\) y \(c_{FP} = 1\), la fórmula dice 0,20 y la tabla sobre 9.000 clientes también da 0,20 para el boosting (que está bien calibrado) y 0,25 para la logística (que reparte en rampa lo que la realidad concentra en un escalón). El notebook 06 tiene ese cierre completo.</p>
+</section>
+<div class="nav"><button type="button" id="tw-prev">Anterior</button><button type="button" id="tw-next">Siguiente</button></div>
+</div>
+</div>
