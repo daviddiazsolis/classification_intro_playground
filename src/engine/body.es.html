@@ -10,6 +10,7 @@
   <button type="button" data-m="bal"><span>08</span>Desbalanceo</button>
   <button type="button" data-m="mue"><span>09</span>Variación muestral</button>
   <button type="button" data-m="tw"><span>10</span>Taiwán: más allá de la logística</button>
+  <button type="button" data-m="cal"><span>11</span>Calibración de probabilidades</button>
 </nav>
 
 <!-- ===================== 01 RECTA ===================== -->
@@ -155,6 +156,7 @@
 <div class="modelo" id="m-roc">
 <div class="controls">
   <div class="ctrl" data-pasos="0,1"><label for="roc-u">Umbral: <b id="roc-u-v">0,50</b></label><input type="range" id="roc-u" min="0" max="100" value="50" style="width:240px"></div>
+  <div class="ctrl" data-pasos="3"><label for="roc-fpr">Tasa de falsos positivos que toleras: <b id="roc-fpr-v">10%</b></label><input type="range" id="roc-fpr" min="1" max="60" value="10" style="width:240px"></div>
   <div class="ctrl"><label>&nbsp;</label><button type="button" id="roc-replay">Volver a animar</button></div>
 </div>
 <nav class="rail" id="roc-rail"></nav>
@@ -176,6 +178,13 @@
   <p>El AUC resume qué tan lejos de la diagonal está la curva. Se puede calcular como suma de trapecios sobre los 21 puntos de la tabla, o de forma exacta usando cada uno de los 300 scores de testing como umbral. Una lectura complementaria que conviene conocer: el AUC es la probabilidad de que, tomando al azar un mal pagador y un buen pagador, el modelo le haya asignado más riesgo al malo. Sirve para comparar modelos sin fijar umbral, pero esconde el trade-off: cuando dos curvas ROC se cruzan, un solo número no decide nada, y hay que mirar la curva en la zona de umbrales que el negocio va a usar.</p>
   <div class="flow" id="roc-auc"></div>
   <p class="note">Un detalle honesto: aquí el AUC de testing (0,822) sale mayor que el de training (0,777). No es lo habitual y no significa que el modelo generalice mejor de lo que aprendió: con 300 clientes de testing el AUC tiene un error muestral de varios puntos, y en la pestaña 09 lo medimos.</p>
+</section>
+<section class="panel" id="roc-s3">
+  <h2>Comparar modelos con la curva, no solo con el AUC</h2>
+  <p>El AUC es un solo número para toda la curva, y toda la curva incluye zonas donde nunca vas a operar: nadie aprueba créditos marcando al 80% de los buenos pagadores. Cuando comparas dos modelos, lo que importa es qué recall te da cada uno <b>en la tasa de falsos positivos que tu negocio tolera</b>: un banco conservador se para en 5% o 10% de buenos rechazados; una campaña de cobranza barata puede irse a 40%. Dos curvas pueden tener casi el mismo AUC y cruzarse: una gana a la izquierda (pocos falsos positivos) y la otra a la derecha. En ese caso el AUC empata y la decisión la da la curva.</p>
+  <p>Para verlo, aquí se entrenan en vivo tres logísticas sobre la misma partición: la completa de 18 columnas, una que usa solo las 14 columnas 0/1 (cuenta corriente, historial, ahorro, vivienda, propósito) y otra que usa solo las 4 numéricas. Mueve la tolerancia de falsos positivos y mira dos cosas: el recall de cada modelo justo en esa tasa, y el <b>AUC parcial</b>, el área bajo la curva solo hasta esa tasa, que es la forma de resumir la curva en la zona que te importa en vez de en toda.</p>
+  <div class="flow" id="roc-cmp"></div>
+  <p class="note" id="roc-cmp-nota"></p>
 </section>
 <div class="nav"><button type="button" id="roc-prev">Anterior</button><button type="button" id="roc-next">Siguiente</button></div>
 </div>
@@ -308,6 +317,9 @@
 <!-- ===================== 10 TAIWAN ===================== -->
 <div class="modelo" id="m-tw">
 <div class="controls">
+  <div class="ctrl" data-pasos="5"><label for="tw-fpr">Tasa de falsos positivos que toleras: <b id="tw-fpr-v">5%</b></label><input type="range" id="tw-fpr" min="1" max="60" value="5" style="width:220px"></div>
+  <div class="ctrl" data-pasos="5"><label>Zoom</label><div class="seg" id="tw-zoom"><button type="button" data-z="1" aria-pressed="true">Zona de operación</button><button type="button" data-z="0" aria-pressed="false">Toda la curva</button></div></div>
+  <div class="ctrl" data-pasos="5" style="flex:1 1 100%"><label>Modelos en el gráfico</label><div class="seg" id="tw-mod"><button type="button" data-n="logistica lineal" aria-pressed="true">logística</button><button type="button" data-n="logistica grado 2 sin regularizar" aria-pressed="false">grado 2 libre</button><button type="button" data-n="logistica grado 2 regularizada" aria-pressed="true">grado 2 L2</button><button type="button" data-n="arbol profundidad 4" aria-pressed="true">árbol prof. 4</button><button type="button" data-n="arbol sin limite" aria-pressed="false">árbol sin límite</button><button type="button" data-n="random forest 300" aria-pressed="true">random forest</button><button type="button" data-n="gradient boosting 300" aria-pressed="true">boosting</button></div></div>
   <div class="ctrl"><label>&nbsp;</label><button type="button" id="tw-replay">Volver a animar</button></div>
 </div>
 <nav class="rail" id="tw-rail"></nav>
@@ -346,6 +358,68 @@
   <div class="flow" id="tw-esc"></div>
   <p class="note">Un AUC no es una decisión. Para usar el ganador hay que fijar el umbral con costos, como en la pestaña 06, y revisar la calibración: con \(c_{FN} = 4\) y \(c_{FP} = 1\), la fórmula dice 0,20 y la tabla sobre 9.000 clientes también da 0,20 para el boosting (que está bien calibrado) y 0,25 para la logística (que reparte en rampa lo que la realidad concentra en un escalón). El notebook 06 tiene ese cierre completo.</p>
 </section>
+
+<section class="panel" id="tw-s5">
+  <h2>Curvas ROC: cuando el AUC empata, la curva decide</h2>
+  <p>La tabla de la pestaña anterior ordena los modelos por AUC, y el AUC es un promedio sobre toda la curva. Pero un banco no opera en toda la curva: opera en un punto, el que fija su tolerancia a rechazar buenos clientes. Un emisor de tarjetas conservador se para en 5% de falsos positivos; una campaña de cobranza preventiva, donde marcar de más solo cuesta una llamada, puede irse a 30% o 40%. Dos modelos con AUC casi igual pueden cruzarse: uno gana a la izquierda y el otro a la derecha, y entonces la pregunta correcta no es "cuál tiene más AUC" sino "cuál atrapa más morosos en <b>mi</b> tasa de falsos positivos".</p>
+  <p>Aquí están las siete curvas de los modelos de esta pestaña, calculadas sobre los 9.000 clientes de testing. Mueve la tolerancia y mira la tabla: el recall de cada modelo justo en esa tasa y el <b>AUC parcial</b> (el área solo hasta esa tasa, dividida por su ancho), que es el resumen honesto cuando sabes dónde vas a operar. El zoom recorta el gráfico a la zona de operación, que es donde las curvas se distinguen; en toda la curva parecen casi iguales.</p>
+  <div class="flow" id="tw-roc"></div>
+  <p class="note" id="tw-roc-nota"></p>
+</section>
 <div class="nav"><button type="button" id="tw-prev">Anterior</button><button type="button" id="tw-next">Siguiente</button></div>
+</div>
+
+<!-- ===================== 11 CALIBRACION ===================== -->
+<div class="modelo" id="m-cal">
+<div class="controls">
+  <div class="ctrl" data-pasos="0,1"><label>Grupos del diagrama</label><div class="seg" id="cal-k"><button type="button" data-k="5" aria-pressed="false">5 quintiles</button><button type="button" data-k="10" aria-pressed="true">10 deciles</button></div></div>
+  <div class="ctrl" data-pasos="2"><label for="cal-c">Constante que se resta al logit: <b id="cal-c-v">0,85</b></label><input type="range" id="cal-c" min="0" max="150" value="85" style="width:220px"></div>
+  <div class="ctrl" data-pasos="3" style="flex:1 1 100%"><label>Modelo (Taiwán)</label><div class="seg" id="cal-mod"><button type="button" data-n="logit" aria-pressed="true">logística</button><button type="button" data-n="arbol_libre" aria-pressed="false">árbol sin límite</button><button type="button" data-n="arbol_4" aria-pressed="false">árbol prof. 4</button><button type="button" data-n="rf1" aria-pressed="false">random forest, hojas de 1</button><button type="button" data-n="rf5" aria-pressed="false">random forest, hojas de 5</button><button type="button" data-n="gb" aria-pressed="false">boosting</button></div></div>
+  <div class="ctrl" data-pasos="3"><label>Corrección</label><div class="seg" id="cal-met"><button type="button" data-c="platt" aria-pressed="true">Platt</button><button type="button" data-c="iso" aria-pressed="false">Isotónica</button></div></div>
+  <div class="ctrl" data-pasos="4"><label for="cal-fn">Costo de un falso negativo (falso positivo = 1): <b id="cal-fn-v">5</b></label><input type="range" id="cal-fn" min="1" max="10" value="5" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="cal-replay">Volver a animar</button></div>
+</div>
+<nav class="rail" id="cal-rail"></nav>
+
+<section class="panel" id="cal-s0">
+  <h2>Cuando el modelo dice 30%, tiene que ser 30%</h2>
+  <p>Un clasificador hace dos cosas distintas: <b>ordena</b> a los clientes (los más riesgosos arriba) y les pone un <b>número</b>. El AUC de la pestaña 05 mide solo lo primero. La calibración mide lo segundo: si tomo a todos los clientes a los que el modelo les dio 30%, ¿deja de pagar el 30% de ellos? Para aprobar o rechazar con un umbral cualquiera basta ordenar bien; para fijar el umbral con costos (pestaña 06), para provisionar, para cobrar una tasa según el riesgo o para sumar los riesgos de una cartera, el número tiene que significar lo que dice.</p>
+  <p>Cómo se mira: se ordenan los clientes de testing por probabilidad, se parten en grupos del mismo tamaño y en cada grupo se compara la probabilidad promedio con la fracción que realmente no pagó. Esos puntos contra la diagonal son el <b>diagrama de confiabilidad</b>: sobre la diagonal, calibrado; por debajo, el modelo exagera el riesgo; por encima, lo subestima. Tres números lo resumen: el <b>Brier</b> (error cuadrático medio de la probabilidad contra el 0/1), el <b>log loss</b> (la pérdida de la pestaña 02, que castiga la seguridad equivocada) y el <b>ECE</b>, la distancia promedio entre los puntos y la diagonal, ponderada por el tamaño de cada grupo. Ninguno de los tres cambia el AUC, y el AUC no cambia con ninguna transformación creciente de las probabilidades: por eso dos modelos pueden tener el mismo AUC y calibraciones muy distintas.</p>
+  <div class="flow" id="cal-diag"></div>
+  <p class="note" id="cal-diag-nota"></p>
+</section>
+
+<section class="panel" id="cal-s1">
+  <h2>Por qué se pierde: balancear las clases</h2>
+  <p>En la pestaña 08 corregimos el desbalanceo con class weights (peso 1,667 para los malos pagadores y 0,714 para los buenos) y el recall subió. El precio, que dijimos y no mostramos, es que el modelo aprende con una base ficticia donde los malos son el 50%, y devuelve las probabilidades de esa base ficticia: el orden casi no cambia (mismo AUC), pero cada número está inflado. Lo mismo pasa con el submuestreo y el sobremuestreo, porque repetir o botar filas es ponderarlas. No es un defecto del balanceo: es su consecuencia lógica, porque le cambiamos la tasa base al modelo.</p>
+  <p>Hay otras dos causas que no dependen de los pesos. La <b>forma del modelo</b>: una logística lineal supone que el logaritmo de las chances es lineal en las variables, y si la realidad tiene escalones (como el atraso en Taiwán, pestaña 10) dibuja una rampa que pasa por encima en un tramo y por debajo en otro. Y <b>los árboles y ensambles por construcción</b>: un árbol sin límite predice 0 o 1, y un random forest promedia árboles que memorizaron. Esas dos se ven en el paso 4.</p>
+  <div class="flow" id="cal-bal"></div>
+  <p class="note" id="cal-bal-nota"></p>
+</section>
+
+<section class="panel" id="cal-s2">
+  <h2>La corrección exacta: restar una constante al logit</h2>
+  <p>Cuando la descalibración viene de haber ponderado las clases, la logística tiene una solución que no necesita ni un dato más. Ponderar la clase 1 por \(w_1\) y la clase 0 por \(w_0\) equivale a entrenar sobre una población donde las chances a priori de ser positivo se multiplicaron por \(w_1 / w_0\), y en una logística eso desplaza solo el intercepto: el logit del modelo balanceado es el logit verdadero más \(\ln(w_1 / w_0)\). Para volver a la población real basta restar esa constante:</p>
+  <p>\[ z_{\text{corregido}} = z_{\text{balanceado}} - \ln\frac{w_1}{w_0}, \qquad p_{\text{corregido}} = \frac{1}{1 + e^{-z_{\text{corregido}}}} \]</p>
+  <p>Con class weights balanceados la razón es \(w_1 / w_0 = n_0 / n_1 = 490 / 210 = 2{,}333\) y la constante \(\ln 2{,}333 = 0{,}847\). Con sobremuestreo de la minoritaria repetida \(k\) veces, la constante es \(\ln k\); con submuestreo que deja \(n_0'\) buenos, \(\ln(n_0 / n_0')\). Restar una constante no cambia el orden, así que el AUC queda igual y solo se corrige el nivel (King y Zeng, 2001). Mueve el deslizador y mira dónde el Brier y el ECE tocan fondo: es justo en 0,847, no hay que buscarlo.</p>
+  <div class="flow" id="cal-corr"></div>
+  <p class="note" id="cal-corr-nota"></p>
+</section>
+
+<section class="panel" id="cal-s3">
+  <h2>La corrección general: Platt scaling y regresión isotónica</h2>
+  <p>Cuando la causa no es un peso conocido (una logística mal especificada, un árbol, un modelo que viene de otra parte) no hay constante que restar. La solución general es <b>aprender una función que traduzca los scores del modelo a probabilidades reales</b>, con datos etiquetados que el modelo no vio. <b>Platt scaling</b> (1999) es una logística de un solo insumo, el logit del modelo: \(p = 1 / (1 + e^{-(a z + b)})\). Dos parámetros, así que funciona con pocos datos, y solo puede estirar, comprimir y desplazar: arregla un modelo uniformemente demasiado seguro o demasiado tibio, pero no una rampa contra una escalera. La <b>regresión isotónica</b> (Zadrozny y Elkan, 2002) es la función creciente en escalera que mejor ajusta la fracción real contra el score: sin forma fija, corrige cualquier deformación monótona, pero necesita miles de filas.</p>
+  <p>La regla que no se negocia: la función de calibración se ajusta sobre filas que el modelo no usó para entrenarse y que no son testing. Por eso los modelos de Taiwán de este paso se entrenaron con el 70% de training (14.700 clientes de <b>ajuste</b>), la función de calibración se aprendió sobre el otro 30% (6.300 de <b>calibración</b>) y todo se mide sobre los 9.000 de testing. En scikit-learn, <code>CalibratedClassifierCV(modelo, method="sigmoid" | "isotonic", cv=5)</code> hace esto por validación cruzada y además promedia los cinco modelos. Todo lo de este paso viene precalculado en Python; el notebook 07 lo reproduce completo.</p>
+  <div class="flow" id="cal-tw"></div>
+  <p class="note" id="cal-tw-nota"></p>
+</section>
+
+<section class="panel" id="cal-s4">
+  <h2>Qué cambia en la decisión: la fórmula de costos vuelve a funcionar</h2>
+  <p>En la pestaña 06 vimos que con un falso negativo cinco veces más caro que un falso positivo el umbral de la <b>fórmula</b> es \(c_{FP} / (c_{FP} + c_{FN}) = 1/6 = 0{,}167\), y que la <b>tabla</b> sobre testing daba otro número. Una de las razones era la calibración: la fórmula supone que \(p\) es la probabilidad real de impago, y si \(p\) está inflada, corta donde no debe. Aquí se comprueba en vivo con el modelo balanceado antes y después de la corrección del intercepto: mueve el costo del falso negativo y compara, para cada modelo, el costo que se paga cortando donde dice la fórmula con el mínimo que la tabla encuentra probando todos los umbrales.</p>
+  <div class="flow" id="cal-dec"></div>
+  <p class="note" id="cal-dec-nota"></p>
+</section>
+<div class="nav"><button type="button" id="cal-prev">Anterior</button><button type="button" id="cal-next">Siguiente</button></div>
 </div>
 </div>

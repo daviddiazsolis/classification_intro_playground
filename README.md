@@ -8,10 +8,10 @@ Same stack as the other playgrounds: Vite + React 19 + Tailwind 4 + lucide-react
 
 - `src/components/` shell of the site (hero, translation widget, sandbox link, notebooks and Excel files, references, footer) in the hub template.
 - `src/components/Playground.tsx` mounts the tab engine and re-mounts it when the language changes, keeping tab and step.
-- `src/engine/body.es.html`, `body.en.html` content of the ten tabs; `engine.es.js`, `engine.en.js` the live computations (token-identical except for displayed strings): the logistic model is trained in the browser with Newton / IRLS, and ROC, AUC, cost tables, regularization paths, balancing, cross-validation and bootstrap are all computed live on the 1,000 German Credit rows; `data.es.json`, `data.en.json` the prepared dataset, the scikit-learn reference results and the precomputed Taiwan case; `engine.css` the styles, scoped under `.tfp` and mapped to the hub palette (zinc, amber accent).
+- `src/engine/body.es.html`, `body.en.html` content of the eleven tabs; `engine.es.js`, `engine.en.js` the live computations (token-identical except for displayed strings): the logistic model is trained in the browser with Newton / IRLS, and ROC, AUC, cost tables, regularization paths, balancing, cross-validation and bootstrap are all computed live on the 1,000 German Credit rows; `data.es.json`, `data.en.json` the prepared dataset, the scikit-learn reference results, the precomputed Taiwan case and the precomputed Taiwan calibration block (`gen/datos_cal.py`, which reruns notebook 07); `engine.css` the styles, scoped under `.tfp` and mapped to the hub palette (zinc, amber accent).
 - `gen/datos_sitio.py` regenerates `data.es.json` from the Excel generators' JSON files (`datos_log.json`, `datos_reg.json`, `datos_bal.json`) and the Taiwan CSV.
 - `excel/` the three Excel workbooks (base German Credit, regularization, imbalance) linked from the site.
-- `notebooks/` the two Colab notebooks (05 German Credit logistic regression, 06 Taiwan beyond logistic regression) linked from the site.
+- `notebooks/` the three Colab notebooks (05 German Credit logistic regression, 06 Taiwan beyond logistic regression, 07 probability calibration), each in Spanish and English (`_EN`), linked from the site.
 
 ## Run
 

@@ -12,14 +12,14 @@ export const translations: Record<Language, Record<string, string>> = {
     heroBadge: 'Interactive ML Foundations',
     heroTitle: 'Supervised Intro: Classification',
     heroSubtitle: 'Predicting a yes or a no: from the straight line to logistic regression, and how to judge a classifier',
-    heroDesc: 'One real dataset (1,000 German bank customers, 300 of whom defaulted), one algorithm (logistic regression) and every number computed live in your browser. The tabs follow the order of the class: why a straight line fails and how the logistic function fixes it; how a model that predicts probabilities measures its errors; training; the confusion matrix, recall as effectiveness and precision as efficiency; the threshold as a decision, the ROC curve and the AUC; the cost-optimal threshold; regularization; class imbalance; how much a metric moves when the sample changes; and a final tab on 30,000 Taiwanese credit cards where decision trees and ensembles are explained from scratch and honestly compared. Each tab has a matching Excel workbook and Colab notebook below.',
+    heroDesc: 'One real dataset (1,000 German bank customers, 300 of whom defaulted), one algorithm (logistic regression) and every number computed live in your browser. The tabs follow the order of the class: why a straight line fails and how the logistic function fixes it; how a model that predicts probabilities measures its errors; training; the confusion matrix, recall as effectiveness and precision as efficiency; the threshold as a decision, the ROC curve and the AUC; the cost-optimal threshold; regularization; class imbalance; how much a metric moves when the sample changes; a tab on 30,000 Taiwanese credit cards where decision trees and ensembles are explained from scratch and honestly compared; and a closing tab on probability calibration, where the model’s numbers are checked and corrected so that 30% means 30%. Each tab has a matching Excel workbook and Colab notebook below.',
     heroTag1: 'Logistic regression',
     heroTag2: 'Recall & precision',
     heroTag3: 'ROC, AUC & thresholds',
     heroTag4: 'Trees & ensembles',
 
     howTitle: 'How to use this site',
-    howDesc: 'Pick a tab, then walk through its steps with the rail or the Previous / Next buttons. Controls appear only on the steps where they matter. Everything about German Credit is computed live from the 1,000 customers; the Taiwan tab shows results precomputed in Python.',
+    howDesc: 'Pick a tab, then walk through its steps with the rail or the Previous / Next buttons. Controls appear only on the steps where they matter. Everything about German Credit is computed live from the 1,000 customers; the Taiwan tab, and the Taiwan part of the calibration tab, show results precomputed in Python.',
 
     sandboxTitle: 'Then play with the sandbox',
     sandboxDesc: 'Once the ideas are clear, the Evaluation Playground lets you move thresholds on synthetic data and watch confusion matrices, ROC curves and precision-recall curves respond, and try SMOTE and cross-validation.',
@@ -35,7 +35,7 @@ export const translations: Record<Language, Record<string, string>> = {
     xl3Desc: 'Class weights, undersampling, oversampling and SMOTE, each as a row-weight column that Solver minimizes.',
 
     nbTitle: 'Colab notebooks',
-    nbSubtitle: 'Two notebooks that mirror the tabs, with exercises and solutions. Each one is available in English and Spanish; the button opens the version in the language you are reading.',
+    nbSubtitle: 'Three notebooks that mirror the tabs, with exercises and solutions. Each one is available in English and Spanish; the button opens the version in the language you are reading.',
     nbOther: 'Spanish version',
     sisterTitle: 'The sister site',
     sisterDesc: 'The same ritual with a numeric target: linear regression, polynomials, Ridge and Lasso, leakage in time series, volatility and real non-linearity, on four cases from e-commerce sales to California house prices.',
@@ -43,7 +43,9 @@ export const translations: Record<Language, Record<string, string>> = {
     nb1Title: '05 Credit risk with logistic regression',
     nb1Desc: 'The same German Credit preparation and split as the Excel files: line versus logistic, cross-entropy, evaluation, thresholds, ROC and AUC, costs and calibration, regularization, imbalance, sampling variation, cross-validation and bootstrap intervals.',
     nb2Title: '06 Taiwan: beyond logistic regression',
-    nb2Desc: 'Polynomials with regularization, decision trees, random forest and gradient boosting explained from scratch, honest comparison with paired bootstrap and cross-validation, and what the boosting found.',
+    nb2Desc: 'Polynomials with regularization, decision trees drawn box by box, C5.0 with the c50py library, random forest and gradient boosting explained from scratch, honest comparison with paired bootstrap and cross-validation, and what the boosting found.',
+    nb3Title: '07 Probability calibration',
+    nb3Desc: 'Reliability diagrams, Brier, log loss and ECE; why balancing, model shape and trees break calibration; the exact intercept correction for a weighted logistic; Platt scaling and isotonic regression on a separate calibration split; and what changes in the cost-based threshold.',
     nbOpen: 'Open in Colab',
 
     refTitle: 'References',
@@ -68,14 +70,14 @@ export const translations: Record<Language, Record<string, string>> = {
     heroBadge: 'Fundamentos interactivos de ML',
     heroTitle: 'Intro Supervisada: Clasificación',
     heroSubtitle: 'Predecir un sí o un no: de la recta a la regresión logística, y cómo se juzga un clasificador',
-    heroDesc: 'Una base real (1.000 clientes de un banco alemán, 300 de los cuales no pagaron), un solo algoritmo (la regresión logística) y cada número calculado en vivo en tu navegador. Las pestañas siguen el orden de la clase: por qué una recta falla y cómo lo arregla la función logística; cómo mide sus errores un modelo que predice probabilidades; entrenar; la matriz de confusión, recall como eficacia y precision como eficiencia; el umbral como decisión, la curva ROC y el AUC; el umbral óptimo con costos; regularización; desbalanceo de clases; cuánto se mueve una métrica si cambia la muestra; y una pestaña final con 30.000 tarjetas de crédito de Taiwán donde árboles y ensambles se explican desde cero y se comparan con honestidad. Cada pestaña tiene abajo su Excel y su notebook de Colab.',
+    heroDesc: 'Una base real (1.000 clientes de un banco alemán, 300 de los cuales no pagaron), un solo algoritmo (la regresión logística) y cada número calculado en vivo en tu navegador. Las pestañas siguen el orden de la clase: por qué una recta falla y cómo lo arregla la función logística; cómo mide sus errores un modelo que predice probabilidades; entrenar; la matriz de confusión, recall como eficacia y precision como eficiencia; el umbral como decisión, la curva ROC y el AUC; el umbral óptimo con costos; regularización; desbalanceo de clases; cuánto se mueve una métrica si cambia la muestra; una pestaña con 30.000 tarjetas de crédito de Taiwán donde árboles y ensambles se explican desde cero y se comparan con honestidad; y una pestaña de cierre sobre calibración de probabilidades, donde los números del modelo se revisan y se corrigen para que 30% signifique 30%. Cada pestaña tiene abajo su Excel y su notebook de Colab.',
     heroTag1: 'Regresión logística',
     heroTag2: 'Recall y precision',
     heroTag3: 'ROC, AUC y umbrales',
     heroTag4: 'Árboles y ensambles',
 
     howTitle: 'Cómo usar este sitio',
-    howDesc: 'Elige una pestaña y recorre sus pasos con el riel o con los botones Anterior / Siguiente. Los controles aparecen solo en los pasos donde importan. Todo lo de German Credit se calcula en vivo con los 1.000 clientes; la pestaña de Taiwán muestra resultados precalculados en Python.',
+    howDesc: 'Elige una pestaña y recorre sus pasos con el riel o con los botones Anterior / Siguiente. Los controles aparecen solo en los pasos donde importan. Todo lo de German Credit se calcula en vivo con los 1.000 clientes; la pestaña de Taiwán, y la parte de Taiwán de la pestaña de calibración, muestran resultados precalculados en Python.',
 
     sandboxTitle: 'Después, juega con el sandbox',
     sandboxDesc: 'Cuando las ideas estén claras, el Evaluation Playground permite mover umbrales sobre datos sintéticos y ver responder matrices de confusión, curvas ROC y precision-recall, y probar SMOTE y validación cruzada.',
@@ -91,7 +93,7 @@ export const translations: Record<Language, Record<string, string>> = {
     xl3Desc: 'Class weights, submuestreo, sobremuestreo y SMOTE, cada uno como una columna de peso de fila que Solver minimiza.',
 
     nbTitle: 'Notebooks en Colab',
-    nbSubtitle: 'Dos notebooks que siguen las pestañas, con ejercicios y soluciones. Cada uno está en español y en inglés; el botón abre la versión del idioma en que estás leyendo.',
+    nbSubtitle: 'Tres notebooks que siguen las pestañas, con ejercicios y soluciones. Cada uno está en español y en inglés; el botón abre la versión del idioma en que estás leyendo.',
     nbOther: 'Versión en inglés',
     sisterTitle: 'El sitio hermano',
     sisterDesc: 'El mismo ritual con una variable objetivo numérica: regresión lineal, polinomios, Ridge y Lasso, fugas en series de tiempo, volatilidad y no linealidad real, en cuatro casos desde ventas de e-commerce hasta casas en California.',
@@ -99,7 +101,9 @@ export const translations: Record<Language, Record<string, string>> = {
     nb1Title: '05 Riesgo de crédito con regresión logística',
     nb1Desc: 'La misma preparación y partición de German Credit que los Excel: recta contra logística, entropía cruzada, evaluación, umbrales, ROC y AUC, costos y calibración, regularización, desbalanceo, variación muestral, validación cruzada e intervalos por bootstrap.',
     nb2Title: '06 Taiwán: más allá de la logística',
-    nb2Desc: 'Polinomios con regularización, árboles de decisión, random forest y gradient boosting explicados desde cero, comparación honesta con bootstrap pareado y validación cruzada, y qué encontró el boosting.',
+    nb2Desc: 'Polinomios con regularización, árboles de decisión dibujados caja por caja, C5.0 con la librería c50py, random forest y gradient boosting explicados desde cero, comparación honesta con bootstrap pareado y validación cruzada, y qué encontró el boosting.',
+    nb3Title: '07 Calibración de probabilidades',
+    nb3Desc: 'Diagrama de confiabilidad, Brier, log loss y ECE; por qué el balanceo, la forma del modelo y los árboles rompen la calibración; la corrección exacta del intercepto para una logística ponderada; Platt scaling y regresión isotónica sobre una partición de calibración aparte; y qué cambia en el umbral con costos.',
     nbOpen: 'Abrir en Colab',
 
     refTitle: 'Referencias',

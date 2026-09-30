@@ -91,5 +91,16 @@ out["tw"] = {"n": int(len(yt)), "tasa": float(yt.mean()), "ntr": int(len(ya)), "
              "modelos": [{k: v for k, v in m.items() if k != "p"} for m in modelos], "chico": chico, "pares": pares,
              "escalera": esc_.round(4).to_dict("records"), "curva": curva, "cv": cv, "imp": imp, "arbol2": arbol2, "costos": cost, "cal": cal,
              "lam_cv": float(1 / pc.C_[0])}
-json.dump(out, open("/home/claude/hub/supervised_intro_playground/src/engine/data.es.json", "w"), ensure_ascii=False, separators=(",", ":"))
+
+# curvas ROC en una grilla común de FPR (101 puntos) para comparar modelos visualmente
+from sklearn.metrics import roc_curve
+grid = np.round(np.linspace(0, 1, 101), 2)
+def roc_grid(p):
+    fpr, tpr, thr = roc_curve(yb, p)
+    return {"tpr": [float(v) for v in np.interp(grid, fpr, tpr)], "umbral": [float(v) for v in np.interp(grid, fpr, np.clip(thr, 0, 1))]}
+out["tw"]["roc"] = {"fpr": [float(v) for v in grid], "modelos": {m["nombre"]: roc_grid(m["p"]) for m in modelos}}
+# AUC parcial (hasta un FPR máximo) por modelo, para varios topes, calculado exacto con los 9.000 clientes
+from sklearn.metrics import roc_auc_score as _ras
+out["tw"]["pauc"] = {m["nombre"]: {str(f): float(_ras(yb, m["p"], max_fpr=f)) for f in (0.05, 0.1, 0.2, 0.3, 0.5)} for m in modelos}
+json.dump(out, open("/home/claude/hub/classification_intro_playground/src/engine/data.es.json", "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(json.dumps(out)) // 1024, "KB"); print([(m["nombre"], round(m["auc_test"], 3)) for m in modelos]); print(chico); print(esc_.round(3).to_string())

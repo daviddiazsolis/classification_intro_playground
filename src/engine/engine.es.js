@@ -81,7 +81,7 @@ const nom = v => NOMBRE[v] || v;
 const thetaArr = th => [th.intercepto].concat(XC.map(c => th[c]));
 const TH = thetaArr(DATA.theta), TH_LIN = thetaArr(DATA.theta_lineal);
 const sig = z => 1 / (1 + Math.exp(-z));
-const zde = (t, r) => { let z = t[0]; for (let j = 0; j < K; j++) z += t[j + 1] * r.x[j]; return z; };
+const zde = (t, r) => { let z = t[0]; for (let j = 0; j < r.x.length; j++) z += t[j + 1] * r.x[j]; return z; };
 const pde = (t, r) => sig(zde(t, r));
 const perd = (p, y) => -(y ? Math.log(Math.max(p, 1e-12)) : Math.log(Math.max(1 - p, 1e-12)));
 function conf(rows, ps, u) { let TP = 0, FP = 0, TN = 0, FN = 0; rows.forEach((r, i) => { const m = ps[i] > u; if (r.y) { if (m) TP++; else FN++; } else { if (m) FP++; else TN++; } }); const rec = TP + FN ? TP / (TP + FN) : 0, pre = TP + FP ? TP / (TP + FP) : 0; return { TP, FP, TN, FN, acc: (TP + TN) / rows.length, rec, pre, f1: rec + pre ? 2 * rec * pre / (rec + pre) : 0, fpr: FP + TN ? FP / (FP + TN) : 0, rec0: TN + FP ? TN / (TN + FP) : 0, pre0: TN + FN ? TN / (TN + FN) : 0 }; }
@@ -95,7 +95,7 @@ const perdMedia = (rows, ps) => rows.reduce((s, r, i) => s + perd(ps[i], r.y), 0
 // Newton (IRLS) para entrenar en vivo: pocas iteraciones, 19x19
 function solve(A, b) { const n = b.length; const M = A.map((r, i) => r.concat([b[i]])); for (let c = 0; c < n; c++) { let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r; [M[c], M[p]] = [M[p], M[c]]; const d = M[c][c] || 1e-12; for (let r = 0; r < n; r++) { if (r === c) continue; const f = M[r][c] / d; if (!f) continue; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; } } return M.map((r, i) => r[n] / (r[i] || 1e-12)); }
 function entrenar(rows, w = null, iters = 12) {
-  const d = K + 1; let t = Array(d).fill(0);
+  const d = rows[0].x.length + 1; let t = Array(d).fill(0);
   const xs = rows.map(r => [1].concat(r.x)); const ys = rows.map(r => r.y);
   for (let it = 0; it < iters; it++) {
     const H = Array.from({ length: d }, () => Array(d).fill(0)), g = Array(d).fill(0);
@@ -134,7 +134,7 @@ function irModelo(m) {
   GOTO[m](ST[m].paso);
 }
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => irModelo(b.dataset.m));
-const ST = { rec: { paso: 0, z: 1.5, u: 0.5 }, per: { paso: 0, p1: 0.8, p3: 0.1 }, ent: { paso: 0, lr: 0.1, t: null, hist: [] }, eva: { paso: 0, u: 0.5, conj: "s" }, roc: { paso: 0, u: 0.5 }, cos: { paso: 0, fn: 5, fp: 1 }, reg: { paso: 0, tipo: "l2", li: 3 }, bal: { paso: 0, met: "base", u: 0.5 }, mue: { paso: 0, sem: 1, res: [], bsSem: 1 }, tw: { paso: 0 } };
+const ST = { rec: { paso: 0, z: 1.5, u: 0.5 }, per: { paso: 0, p1: 0.8, p3: 0.1 }, ent: { paso: 0, lr: 0.1, t: null, hist: [] }, eva: { paso: 0, u: 0.5, conj: "s" }, roc: { paso: 0, u: 0.5, fpr: 0.1 }, cos: { paso: 0, fn: 5, fp: 1 }, reg: { paso: 0, tipo: "l2", li: 3 }, bal: { paso: 0, met: "base", u: 0.5 }, mue: { paso: 0, sem: 1, res: [], bsSem: 1 }, tw: { paso: 0, fpr: 0.05, zoom: true, act: ["logistica lineal", "logistica grado 2 regularizada", "arbol profundidad 4", "random forest 300", "gradient boosting 300"] }, cal: { paso: 0, k: 10, c: Math.log(490 / 210), mod: "logit", met: "platt", fn: 5 } };
 
 // ===================== 01 RECTA =====================
 (function () {
@@ -303,11 +303,33 @@ const ST = { rec: { paso: 0, z: 1.5, u: 0.5 }, per: { paso: 0, p1: 0.8, p3: 0.1 
       `<div class="block stage"><div class="t">Training y testing</div>${barras([{ lab: "AUC training", v: tr, txt: fmt3(tr) }, { lab: "AUC testing", v: ex, txt: fmt3(ex), cls: "pred" }, { lab: "azar", v: 0.5, txt: "0,500" }], { max: 1 })}</div>`;
     if (anim) stagger(el("roc-s2"));
   }
+  // comparar modelos con la curva: tres logísticas entrenadas en vivo con distintos subconjuntos de columnas
+  let CMP = null;
+  function curvaExacta(rows, ps) { const us = [...new Set(ps)].sort((a, b) => b - a); return [[0, 0]].concat(us.map(u => { const k = conf(rows, ps, u - 1e-12); return [k.fpr, k.rec]; })); }
+  const tprEn = (pts, f) => { let best = 0; pts.forEach(p => { if (p[0] <= f + 1e-12) best = Math.max(best, p[1]); }); return best; };
+  const pAuc = (pts, f) => { let s = 0; for (let i = 1; i < pts.length; i++) { const x0 = Math.min(pts[i - 1][0], f), x1 = Math.min(pts[i][0], f); if (x1 > x0) s += (x1 - x0) * (pts[i][1] + pts[i - 1][1]) / 2; } return s / f; };
+  function modelosCmp() {
+    if (CMP) return CMP;
+    const idxNum = XC.map((c, j) => DATA.NUM.includes(c) ? j : -1).filter(j => j >= 0), idxCat = XC.map((c, j) => DATA.NUM.includes(c) ? -1 : j).filter(j => j >= 0);
+    const sub = (rows, idx) => rows.map(r => ({ x: idx.map(j => r.x[j]), y: r.y }));
+    const mk = (nombre, idx, col) => { const trn = sub(TRN, idx), tst = sub(TST, idx); const t = entrenar(trn); const ps = tst.map(r => pde(t, r)); return { nombre, col, ps, pts: curvaExacta(TST, ps), auc: auc(TST, ps), cols: idx.length }; };
+    CMP = [ { nombre: "completo (18 columnas)", col: "var(--q)", ps: P_TST, pts: curvaExacta(TST, P_TST), auc: auc(TST, P_TST), cols: 18 }, mk("solo las 14 columnas 0/1", idxCat, "var(--k)"), mk("solo las 4 numéricas", idxNum, "var(--cobre)") ];
+    return CMP;
+  }
+  function rComparar(anim) {
+    const M = modelosCmp(); const f = st.fpr;
+    el("roc-cmp").innerHTML = `<div class="block stage"><div class="t">Tres logísticas, misma partición, curvas ROC en testing</div>${curva(M.map(m => ({ pts: m.pts, col: m.col, sw: 2, lab: "" })).concat([{ pts: [[0, 0], [1, 1]], col: "var(--muted)", dash: true }]), { xr: [0, 1], yr: [0, 1], xt: [0, 0.25, 0.5, 0.75, 1], yt: [0, 0.5, 1], xf: fmt2, yf: fmt2, xl: "tasa de falsos positivos", w: 460, h: 320, extra: [{ tipo: "vline", x: f, txt: "FP máx " + pct0(f) }] })}<p style="font-size:.85rem;color:var(--muted);max-width:44ch">${M.map(m => `<span style="color:${m.col};font-weight:600">${m.nombre}</span>`).join(" · ")}. La línea punteada vertical es la tasa de falsos positivos que toleras; a la izquierda de ella está la zona donde vas a operar.</p></div>` +
+      `<div class="block stage"><div class="t">En la zona que importa (FP hasta ${pct0(f)})</div>${tabla(["modelo", "columnas", "AUC (toda la curva)", "recall con FP = " + pct0(f), "recall promedio hasta FP " + pct0(f)], M.map(m => ({ c: [m.nombre, m.cols, fmt3(m.auc), fmt3(tprEn(m.pts, f)), fmt3(pAuc(m.pts, f))] })), "cmp small")}<p style="font-size:.85rem;color:var(--muted);max-width:44ch">La última columna es el área bajo la curva solo hasta ese FP, dividida por el ancho (un AUC parcial): promedia el recall en la zona que vas a usar en vez de en toda la curva.</p></div>`;
+    const orden = M.slice().sort((a, b) => tprEn(b.pts, f) - tprEn(a.pts, f)); const gana = orden[0], segundo = orden[1];
+    el("roc-cmp-nota").innerHTML = `<b>Lectura.</b> Con una tolerancia de ${pct0(f)} de falsos positivos, el modelo que más malos pagadores atrapa es <b>${gana.nombre}</b> (recall ${fmt3(tprEn(gana.pts, f))}), ${fmt3(tprEn(gana.pts, f) - tprEn(segundo.pts, f))} más que ${segundo.nombre}. En esta base la curva completa domina a las otras dos en todo el rango, así que el AUC y la lectura punto a punto coinciden; en la pestaña 10 verás el caso contrario, dos modelos que casi empatan en AUC y se cruzan, donde solo la curva dice cuál conviene en tu zona.`;
+    if (anim) stagger(el("roc-s3"));
+  }
   el("roc-u").oninput = e => { st.u = +e.target.value / 100; el("roc-u-v").textContent = fmt2(st.u); if (st.paso === 0) rTabla(false); if (st.paso === 1) rCurva(false); };
-  function render(anim) { [rTabla, rCurva, rAuc][st.paso](anim); }
+  el("roc-fpr").oninput = e => { st.fpr = +e.target.value / 100; el("roc-fpr-v").textContent = pct0(st.fpr); if (st.paso === 3) rComparar(false); };
+  function render(anim) { [rTabla, rCurva, rAuc, rComparar][st.paso](anim); }
   el("roc-replay").onclick = () => render(true);
-  GOTO.roc = pasoGenerico("roc", 3, st, render);
-  stepper("roc", ["Métricas según umbral", "La curva ROC", "El AUC"], GOTO.roc);
+  GOTO.roc = pasoGenerico("roc", 4, st, render);
+  stepper("roc", ["Métricas según umbral", "La curva ROC", "El AUC", "Comparar modelos con la curva"], GOTO.roc);
 })();
 
 // ===================== 06 COSTOS =====================
@@ -509,10 +531,110 @@ const ST = { rec: { paso: 0, z: 1.5, u: 0.5 }, per: { paso: 0, p1: 0.8, p3: 0.1 
       `<div class="block stage"><div class="t">Qué variables usa cada uno (primeras 8 del boosting)</div>${tabla(["variable", "|coef.| logística", "importancia boosting", "importancia random forest"], T.imp.cols.map((c, i) => ({ c, l: T.imp.logit_abs[i], g: T.imp.gb[i], r: T.imp.rf[i] })).sort((a, b) => b.g - a.g).slice(0, 8).map(x => ({ c: [x.c, fmt3(x.l), fmt3(x.g), fmt3(x.r)] })), "cmp small")}<p style="font-size:.85rem;color:var(--muted);max-width:44ch">Los tres coinciden en la primera variable. No son la misma magnitud (la importancia es cuánto redujo la impureza cada variable, una fracción que suma 1) pero sí se comparan en orden.</p></div>`;
     if (anim) stagger(el("tw-s4"));
   }
-  function render(anim) { [rDatos, rPoly, rArbol, rEns, rEsc][st.paso](anim); }
+  // curvas ROC de los siete modelos sobre la misma grilla de FP (precalculadas con los 9.000 clientes de testing)
+  const COL = { "logistica lineal": "var(--q)", "logistica grado 2 sin regularizar": "#94a3b8", "logistica grado 2 regularizada": "var(--k)", "arbol profundidad 4": "var(--v)", "arbol sin limite": "#a3a3a3", "random forest 300": "#0ea5e9", "gradient boosting 300": "var(--cobre)" };
+  const rocPts = n => T.roc.fpr.map((f, i) => [f, T.roc.modelos[n].tpr[i]]);
+  const tprEnT = (n, f) => { const g = T.roc.fpr, t = T.roc.modelos[n].tpr; for (let i = 1; i < g.length; i++) if (g[i] >= f - 1e-9) return t[i - 1] + (t[i] - t[i - 1]) * (f - g[i - 1]) / (g[i] - g[i - 1]); return t[t.length - 1]; };
+  const pAucT = (n, f) => { const g = T.roc.fpr, t = T.roc.modelos[n].tpr; let s = 0; for (let i = 1; i < g.length; i++) { const x0 = Math.min(g[i - 1], f), x1 = Math.min(g[i], f); if (x1 > x0) s += (x1 - x0) * (t[i] + t[i - 1]) / 2; } return s / f; };
+  function rRoc(anim) {
+    const f = st.fpr, act = st.act; const xmax = st.zoom ? Math.max(0.3, Math.min(1, f * 2)) : 1;
+    const series = act.map(n => ({ pts: rocPts(n).filter(p => p[0] <= xmax + 1e-9), col: COL[n], sw: 2 })).concat([{ pts: [[0, 0], [xmax, xmax]], col: "var(--muted)", dash: true }]);
+    const ymax = st.zoom ? Math.min(1, Math.ceil(Math.max(...act.map(n => tprEnT(n, xmax))) * 10) / 10 + 0.1) : 1;
+    el("tw-roc").innerHTML = `<div class="block stage"><div class="t">Curvas ROC en testing (9.000 clientes)${st.zoom ? ", zoom hasta FP " + pct0(xmax) : ""}</div>${curva(series, { xr: [0, xmax], yr: [0, ymax], xt: st.zoom ? [0, xmax / 2, xmax] : [0, 0.25, 0.5, 0.75, 1], yt: [0, ymax / 2, ymax], xf: fmt2, yf: fmt2, xl: "tasa de falsos positivos", w: 460, h: 330, extra: [{ tipo: "vline", x: f }] })}<p style="font-size:.85rem;color:var(--muted);max-width:46ch">${act.map(n => `<span style="color:${COL[n]};font-weight:600">${NM[n]}</span>`).join(" · ")}</p></div>` +
+      `<div class="block stage"><div class="t">Con FP hasta ${pct0(f)}: quién atrapa más</div>${tabla(["modelo", "AUC", "recall con FP = " + pct0(f), "AUC parcial hasta " + pct0(f)], act.slice().sort((a, b) => tprEnT(b, f) - tprEnT(a, f)).map((n, i) => ({ c: [NM[n], fmt3(m(n).auc_test), fmt3(tprEnT(n, f)), fmt3(pAucT(n, f))], cls: i === 0 ? "hi" : "" })), "cmp small")}</div>`;
+    const rk = (fx) => act.slice().sort((a, b) => tprEnT(b, fx) - tprEnT(a, fx)); const r5 = rk(0.05), r50 = rk(0.5); const byAuc = act.slice().sort((a, b) => m(b).auc_test - m(a).auc_test);
+    el("tw-roc-nota").innerHTML = `<b>Lectura.</b> Por AUC el orden es ${byAuc.map(n => NM[n] + " (" + fmt3(m(n).auc_test) + ")").join(", ")}. Con FP hasta ${pct0(f)} el que más atrapa es <b>${NM[rk(f)[0]]}</b> (recall ${fmt3(tprEnT(rk(f)[0], f))}). Fíjate en el árbol de profundidad 4 y en la logística de grado 2: por AUC pierde el árbol (0,737 contra 0,750), pero con FP hasta 5% el árbol atrapa más (${fmt3(tprEnT("arbol profundidad 4", 0.05))} contra ${fmt3(tprEnT("logistica grado 2 regularizada", 0.05))}), porque su escalón grande cae justo en esa zona; con FP hasta 50% se da vuelta (${fmt3(tprEnT("arbol profundidad 4", 0.5))} contra ${fmt3(tprEnT("logistica grado 2 regularizada", 0.5))}). Y random forest y boosting, que por AUC difieren en 0,007, casi empatan en 5% (${fmt3(tprEnT("random forest 300", 0.05))} y ${fmt3(tprEnT("gradient boosting 300", 0.05))}) y se separan recién más a la derecha; con AUC a 0,007 de distancia eso es un empate práctico en 5%. El AUC ordena en promedio; tu punto de operación puede ordenar distinto.`;
+    if (anim) stagger(el("tw-s5"));
+  }
+  el("tw-fpr").oninput = e => { st.fpr = +e.target.value / 100; el("tw-fpr-v").textContent = pct0(st.fpr); if (st.paso === 5) rRoc(false); };
+  el("tw-mod").querySelectorAll("button").forEach(b => b.onclick = () => { const n = b.dataset.n; const on = b.getAttribute("aria-pressed") === "true"; if (on && st.act.length === 1) return; b.setAttribute("aria-pressed", String(!on)); st.act = [...el("tw-mod").querySelectorAll("button")].filter(x => x.getAttribute("aria-pressed") === "true").map(x => x.dataset.n); if (st.paso === 5) rRoc(false); });
+  segmento("tw-zoom", "z", z => { st.zoom = z === "1"; if (st.paso === 5) rRoc(false); });
+  function render(anim) { [rDatos, rPoly, rArbol, rEns, rEsc, rRoc][st.paso](anim); }
   el("tw-replay").onclick = () => render(true);
-  GOTO.tw = pasoGenerico("tw", 5, st, render);
-  stepper("tw", ["Los datos", "Polinomios y regularización", "Árboles", "Ensambles", "Qué encontró"], GOTO.tw);
+  GOTO.tw = pasoGenerico("tw", 6, st, render);
+  stepper("tw", ["Los datos", "Polinomios y regularización", "Árboles", "Ensambles", "Qué encontró", "Curvas ROC: cuando el AUC empata"], GOTO.tw);
+})();
+
+// ===================== 11 CALIBRACION =====================
+(function () {
+  const st = ST.cal; const C = DATA.cal;
+  const NMT = { logit: "logística lineal", arbol_libre: "árbol sin límite", arbol_4: "árbol, profundidad 4", rf1: "random forest, hojas de 1", rf5: "random forest, hojas de 5", gb: "gradient boosting" };
+  const NMC = { raw: "sin calibrar", platt: "Platt", iso: "isotónica" };
+  const NMB = { base: "sin balancear", cw: "class weights", sub: "submuestreo", over: "sobremuestreo ×2", smote: "SMOTE" };
+  const LNW = Math.log(490 / 210);
+  // calibración calculada en vivo sobre los 300 clientes de testing
+  const media = ps => ps.reduce((a, b) => a + b, 0) / ps.length;
+  function grupos(rows, ps, k) { const idx = rows.map((r, i) => i).sort((a, b) => ps[a] - ps[b]); const out = []; for (let g = 0; g < k; g++) { const a = Math.floor(g * idx.length / k), b = Math.floor((g + 1) * idx.length / k); const sel = idx.slice(a, b); out.push({ n: sel.length, p: media(sel.map(i => ps[i])), y: media(sel.map(i => rows[i].y)) }); } return out; }
+  const ece = gs => gs.reduce((s, g) => s + g.n * Math.abs(g.p - g.y), 0) / gs.reduce((s, g) => s + g.n, 0);
+  const brier = (rows, ps) => rows.reduce((s, r, i) => s + (ps[i] - r.y) ** 2, 0) / rows.length;
+  const met = (rows, ps, k) => ({ auc: auc(rows, ps), brier: brier(rows, ps), ll: perdMedia(rows, ps), ece: ece(grupos(rows, ps, k)), pm: media(ps) });
+  const pCw = TST.map(r => pde(thetaArr(DATA.bal.cw.theta), r)), zCw = TST.map(r => zde(thetaArr(DATA.bal.cw.theta), r));
+  const pCorr = c => zCw.map(z => sig(z - c));
+  const COLB = { base: "var(--q)", cw: "var(--bad)", corr: "var(--cobre)", sub: "var(--v)", over: "var(--k)" };
+  function diagrama(series, tit, o = {}) {
+    const ss = [{ pts: [[0, 1e-9], [1, 1]], col: "var(--muted)", dash: true }].concat(series.map(s => ({ pts: s.g.map(g => [g.p, g.y]), col: s.col, marks: true, r: 4, sw: 2 })));
+    return `<div class="block stage"><div class="t">${tit}</div>${curva(ss, { xr: [0, 1], yr: [0, 1], xt: [0, 0.25, 0.5, 0.75, 1], yt: [0, 0.5, 1], xf: fmt2, yf: fmt2, xl: "probabilidad que dice el modelo (promedio del grupo)", w: o.w || 400, h: o.h || 300 })}<p style="font-size:.85rem;color:var(--muted);max-width:44ch">Vertical: fracción que realmente no pagó. ${series.map(s => `<span style="color:${s.col};font-weight:600">${s.lab}</span>`).join(" · ")}</p></div>`;
+  }
+  const filaMet = (nombre, m, cls = "") => ({ c: [nombre, fmt3(m.auc), fmt3(m.brier), fmt3(m.ll), fmt3(m.ece), fmt3(m.pm)], cls });
+  const CAB = ["modelo", "AUC", "Brier", "log loss", "ECE", "p promedio"];
+  function rDiag(anim) {
+    const gs = grupos(TST, P_TST, st.k), m = met(TST, P_TST, st.k);
+    el("cal-diag").innerHTML = diagrama([{ g: gs, col: COLB.base, lab: "logística de la pestaña 03, testing" }], `Diagrama de confiabilidad, ${st.k} grupos de ${Math.round(300 / st.k)} clientes`) +
+      `<div class="block stage"><div class="t">Los números, en testing (tasa real 0,300)</div>${kpi([{ t: "AUC", v: fmt3(m.auc) }, { t: "Brier", v: fmt3(m.brier) }, { t: "log loss", v: fmt3(m.ll) }, { t: "ECE", v: fmt3(m.ece), col: "var(--cobre)" }, { t: "p promedio", v: fmt3(m.pm) }])}${tabla(["grupo", "clientes", "p promedio", "no pagó de verdad", "diferencia"], gs.map((g, i) => ({ c: [i + 1, g.n, fmt3(g.p), fmt3(g.y), (g.y - g.p > 0 ? "+" : "") + fmt3(g.y - g.p)] })), "cmp small")}</div>`;
+    el("cal-diag-nota").innerHTML = `<b>Lectura.</b> La logística sin ponderar de la pestaña 03 sale razonablemente calibrada: probabilidad promedio ${fmt3(m.pm)} contra una tasa real de 0,300, los grupos cerca de la diagonal y un ECE de ${fmt3(m.ece)}, que con grupos de ${Math.round(300 / st.k)} clientes es compatible con puro ruido muestral (cambia de 5 a 10 grupos y fíjate cuánto se mueve). Es lo que se espera de una logística entrenada con la entropía cruzada sin pesos: la función que minimiza es exactamente la que premia decir la probabilidad correcta. Eso se pierde en cuanto la ponderamos.`;
+    if (anim) stagger(el("cal-s0"));
+  }
+  function rBal(anim) {
+    const mets = ["base", "cw", "sub", "over", "smote"].map(b => { const ps = b === "base" ? P_TST : TST.map(r => pde(thetaArr(DATA.bal[b].theta), r)); return { b, ps, m: met(TST, ps, st.k) }; });
+    const g0 = grupos(TST, P_TST, st.k), g1 = grupos(TST, pCw, st.k);
+    el("cal-bal").innerHTML = diagrama([{ g: g0, col: COLB.base, lab: "sin balancear" }, { g: g1, col: COLB.cw, lab: "class weights" }], `Sin balancear contra class weights, ${st.k} grupos`) +
+      `<div class="block stage"><div class="t">Los cinco modelos de la pestaña 08, en testing</div>${tabla(CAB, mets.map(x => filaMet(NMB[x.b], x.m, x.b === "cw" ? "hi" : "")), "cmp small")}<p style="font-size:.85rem;color:var(--muted);max-width:46ch">El AUC casi no se mueve; el Brier, el log loss, el ECE y la probabilidad promedio sí. Todos los métodos que balancean inflan las probabilidades hacia la tasa ficticia de 50%.</p></div>`;
+    const mb = mets[0].m, mc = mets[1].m;
+    el("cal-bal-nota").innerHTML = `<b>Lectura.</b> La curva de class weights queda entera por debajo de la diagonal: el modelo dice más riesgo del que hay. El ECE sube de ${fmt3(mb.ece)} a ${fmt3(mc.ece)}, el Brier de ${fmt3(mb.brier)} a ${fmt3(mc.brier)} y la probabilidad promedio de ${fmt3(mb.pm)} a ${fmt3(mc.pm)}, con el AUC en ${fmt3(mc.auc)} (era ${fmt3(mb.auc)}). Balanceamos para mover el punto de operación, y el precio fue perderle el significado al número. El paso siguiente lo recupera sin costo.`;
+    if (anim) stagger(el("cal-s1"));
+  }
+  function rCorr(anim) {
+    const c = st.c, ps = pCorr(c); const m0 = met(TST, P_TST, 10), m1 = met(TST, pCw, 10), m2 = met(TST, ps, 10);
+    const cs = []; for (let v = 0; v <= 1.5001; v += 0.05) cs.push(Math.round(v * 100) / 100);
+    const curvaE = cs.map(v => [v, met(TST, pCorr(v), 10).ece]), curvaB = cs.map(v => [v, brier(TST, pCorr(v))]);
+    el("cal-corr").innerHTML = diagrama([{ g: grupos(TST, P_TST, 10), col: COLB.base, lab: "sin balancear" }, { g: grupos(TST, pCw, 10), col: COLB.cw, lab: "class weights" }, { g: grupos(TST, ps, 10), col: COLB.corr, lab: "class weights − " + fmt2(c) }], "Deciles en testing, antes y después de restar la constante") +
+      `<div class="block stage"><div class="t">Brier y ECE del modelo corregido según la constante</div>${curva([{ pts: curvaB, col: "var(--k)", lab: "Brier" }, { pts: curvaE, col: "var(--cobre)", lab: "ECE" }], { xr: [0, 1.5], yr: [0, 0.25], xt: [0, 0.5, 1, 1.5], yt: [0, 0.125, 0.25], xf: fmt2, yf: fmt3, xl: "constante restada al logit", w: 400, h: 240, extra: [{ tipo: "vline", x: LNW }, { tipo: "punto", x: c, y: m2.ece, txt: "ECE " + fmt3(m2.ece) }] })}<p style="font-size:.85rem;color:var(--muted);max-width:44ch">La línea punteada es ln(490/210) = ${fmt3(LNW)}, la constante que dice la teoría.</p></div>` +
+      `<div class="block stage" style="flex:1 1 100%"><div class="t">En testing</div>${tabla(CAB, [filaMet("sin balancear", m0), filaMet("class weights", m1), filaMet("class weights − " + fmt2(c), m2, "hi")], "cmp small")}</div>`;
+    el("cal-corr-nota").innerHTML = `<b>Lectura.</b> Con la constante en ${fmt2(c)} el modelo corregido tiene Brier ${fmt3(m2.brier)} y ECE ${fmt3(m2.ece)}, contra ${fmt3(m0.brier)} y ${fmt3(m0.ece)} del modelo sin balancear; el AUC se queda en ${fmt3(m2.auc)} porque restar una constante no cambia el orden. ${Math.abs(c - LNW) < 0.06 ? "Estás en la constante de la teoría: la curva corregida cae encima de la del modelo sin balancear. Balancear y luego corregir el intercepto es lo mismo que no balancear y mover el umbral, que era la conclusión de la pestaña 08." : c < LNW ? "Todavía falta restar: el modelo sigue diciendo más riesgo del que hay. Sigue hasta " + fmt2(LNW) + "." : "Te pasaste: ahora el modelo subestima el riesgo. La constante correcta es " + fmt2(LNW) + "."}`;
+    if (anim) stagger(el("cal-s2"));
+  }
+  const COLC = { raw: "var(--q)", platt: "var(--cobre)", iso: "var(--v)" };
+  function rTw(anim) {
+    const M = C.modelos[st.mod], r = M.raw, x = M[st.met];
+    const g = b => b.p.map((p, i) => ({ n: b.n[i], p, y: b.y[i] }));
+    el("cal-tw").innerHTML = diagrama([{ g: g(r), col: COLC.raw, lab: NMT[st.mod] + ", sin calibrar" }, { g: g(x), col: COLC[st.met], lab: "con " + NMC[st.met] }], `Taiwán, deciles de 900 clientes de testing`) +
+      `<div class="block stage"><div class="t">${NMT[st.mod]}: las tres versiones en testing</div>${tabla(CAB, ["raw", "platt", "iso"].map(k => filaMet(NMC[k], { auc: M[k].auc, brier: M[k].brier, ll: M[k].logloss, ece: M[k].ece, pm: M[k].pm }, k === st.met ? "hi" : "")), "cmp small")}</div>` +
+      `<div class="block stage"><div class="t">ECE de los seis modelos, por corrección</div>${tabla(["modelo", "AUC", "sin calibrar", "Platt", "isotónica"], Object.keys(NMT).map(k => ({ c: [NMT[k], fmt3(C.modelos[k].raw.auc), fmt3(C.modelos[k].raw.ece), fmt3(C.modelos[k].platt.ece), fmt3(C.modelos[k].iso.ece)], cls: k === st.mod ? "hi" : "" })), "cmp small")}<p style="font-size:.85rem;color:var(--muted);max-width:46ch">El árbol sin límite engaña al ECE por deciles (predice casi solo 0 o 1, así que los deciles no se arman bien); míralo por el Brier y el log loss.</p></div>`;
+    const L = { logit: "Platt no hace nada (una sigmoide sobre una sigmoide sigue siendo una rampa), pero la isotónica sí: ECE de 0,051 a 0,009 y Brier de 0,146 a 0,143, porque corrige la forma. Es la rampa contra la escalera del atraso; solo una función sin forma fija la endereza.", arbol_libre: "Brier de 0,27 a 0,16 y log loss de 3,7 a 0,50 con cualquiera de las dos, pero el AUC sigue en 0,616: la calibración arregla los números, no el orden. Un modelo que ordena mal sigue ordenando mal con probabilidades bonitas.", arbol_4: "Ya venía casi calibrado (ECE 0,014); Platt e isotónica lo dejan en 0,004 y cambian el Brier en la cuarta cifra. Cuando el diagrama está pegado a la diagonal, corregir no compra nada.", rf1: "Con hojas de un cliente el random forest exagera un poco en las puntas (ECE 0,030). Platt lo lleva a 0,019 y la isotónica a 0,013, con el Brier apenas mejor: una corrección real pero chica.", rf5: "Con hojas de 5 el random forest ya estaba calibrado (ECE 0,014). Platt casi no lo toca y la isotónica baja el ECE pero sube el log loss: la función de calibración también tiene error muestral, y en un modelo que no la necesita ese error es puro costo.", gb: "El boosting minimiza la entropía cruzada en cada ronda y sale calibrado solo (ECE 0,012). Platt lo mueve a 0,011 y la isotónica lo empeora a 0,013 con peor log loss. No tocar." }[st.mod];
+    el("cal-tw-nota").innerHTML = `<b>Lectura.</b> ${L} La regla práctica: primero el diagrama; si la curva está desplazada de forma uniforme, Platt (o la constante del paso anterior si la causa fue un peso); si está deformada y hay miles de filas, isotónica; si está pegada a la diagonal, no tocar.`;
+    if (anim) stagger(el("cal-s3"));
+  }
+  function rDec(anim) {
+    const fn = st.fn, uf = 1 / (1 + fn); const modelos = [["sin balancear", P_TST], ["class weights", pCw], ["class weights − 0,85", pCorr(LNW)]];
+    const costo = (ps, u) => TST.reduce((s, r, i) => s + (ps[i] > u ? (r.y ? 0 : 1) : (r.y ? fn : 0)), 0);
+    const filas = modelos.map(([n, ps]) => { const cf = costo(ps, uf); const t = UMB.map(u => ({ u, c: costo(ps, u) })); const best = t.reduce((a, b) => b.c < a.c ? b : a); return { n, cf, best, pm: media(ps) }; });
+    const ymax = Math.ceil(Math.max(...modelos.map(([n, ps]) => Math.max(...UMB.map(u => costo(ps, u))))) / 100) * 100;
+    el("cal-dec").innerHTML = `<div class="block stage" style="flex:1 1 100%"><div class="t">German Credit, testing, falso negativo = ${fn} y falso positivo = 1: fórmula ${fmt3(uf)}</div>${tabla(["modelo", "p promedio", "costo cortando en " + fmt3(uf), "mejor umbral de la tabla", "costo mínimo de la tabla", "diferencia"], filas.map((f, i) => ({ c: [f.n, fmt3(f.pm), f.cf, fmt2(f.best.u), f.best.c, "+" + (f.cf - f.best.c)], cls: i === 1 ? "hi" : "" })), "cmp small")}</div>` +
+      `<div class="block stage"><div class="t">Costo por umbral, los tres modelos</div>${curva(modelos.map(([n, ps], i) => ({ pts: UMB.slice().reverse().map(u => [u, costo(ps, u)]), col: [COLB.base, COLB.cw, COLB.corr][i], sw: 2 })), { xr: [0, 1], yr: [0, ymax], xt: [0, 0.25, 0.5, 0.75, 1], yt: [0, ymax / 2, ymax], xf: fmt2, yf: v => String(Math.round(v)), xl: "umbral", w: 400, h: 240, extra: [{ tipo: "vline", x: uf }] })}<p style="font-size:.85rem;color:var(--muted);max-width:44ch">${modelos.map(([n], i) => `<span style="color:${[COLB.base, COLB.cw, COLB.corr][i]};font-weight:600">${n}</span>`).join(" · ")}. La línea punteada es el umbral de la fórmula.</p></div>` +
+      `<div class="block stage"><div class="t">Taiwán, 9.000 clientes, falso negativo = 4 (fórmula 0,20)</div>${tabla(["modelo", "costo en 0,20", "costo en 0,25", "mínimo de la tabla"], [["rf1", "raw"], ["rf1", "platt"], ["gb", "raw"], ["gb", "platt"]].map(([k, c]) => { const b = C.modelos[k][c]; const i20 = C.umbrales.indexOf(0.2), i25 = C.umbrales.indexOf(0.25); const mn = Math.min(...b.costo); return { c: [NMT[k] + (c === "raw" ? "" : " + " + NMC[c]), mil(b.costo[i20]), mil(b.costo[i25]), mil(mn) + " en " + fmt2(C.umbrales[b.costo.indexOf(mn)])] }; }), "cmp small")}<p style="font-size:.85rem;color:var(--muted);max-width:44ch">Con modelos casi calibrados, la curva de costo es plana cerca del óptimo y la fórmula cae dentro de esa zona (menos de 2% de diferencia) aunque no dé el mínimo exacto.</p></div>`;
+    const f0 = filas[0], f1 = filas[1], f2 = filas[2];
+    el("cal-dec-nota").innerHTML = `<b>Lectura.</b> Con class weights sin corregir, cortar donde dice la fórmula (${fmt3(uf)}) cuesta ${f1.cf}, ${f1.cf - f1.best.c} más que el mínimo de la tabla, que está recién en ${fmt2(f1.best.u)}: la fórmula corta muy abajo en una escala inflada. Corregido el intercepto, la fórmula cuesta ${f2.cf} contra un mínimo de ${f2.best.c} en ${fmt2(f2.best.u)}, igual de cerca que el modelo sin balancear (${f0.cf} contra ${f0.best.c}). La diferencia que queda es la variación muestral de una tabla armada con 300 clientes (pestaña 09). Esa es la utilidad concreta de calibrar: con probabilidades que significan lo que dicen, el umbral se fija con lápiz y papel a partir de los costos, y la misma probabilidad sirve para provisionar y para ponerle precio al riesgo.`;
+    if (anim) stagger(el("cal-s4"));
+  }
+  segmento("cal-k", "k", k => { st.k = +k; if (st.paso === 0) rDiag(false); if (st.paso === 1) rBal(false); });
+  el("cal-c").oninput = e => { st.c = +e.target.value / 100; el("cal-c-v").textContent = fmt2(st.c); if (st.paso === 2) rCorr(false); };
+  segmento("cal-mod", "n", n => { st.mod = n; if (st.paso === 3) rTw(false); });
+  segmento("cal-met", "c", c => { st.met = c; if (st.paso === 3) rTw(false); });
+  el("cal-fn").oninput = e => { st.fn = +e.target.value; el("cal-fn-v").textContent = String(st.fn); if (st.paso === 4) rDec(false); };
+  function render(anim) { [rDiag, rBal, rCorr, rTw, rDec][st.paso](anim); }
+  el("cal-replay").onclick = () => render(true);
+  GOTO.cal = pasoGenerico("cal", 5, st, render);
+  stepper("cal", ["Qué es estar calibrado", "Por qué se pierde", "La corrección exacta", "Platt e isotónica", "Qué cambia en la decisión"], GOTO.cal);
 })();
 
 let modeloInicial = (init && init.m && GOTO[init.m]) ? init.m : "rec";

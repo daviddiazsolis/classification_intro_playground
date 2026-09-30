@@ -9,6 +9,7 @@ const NB = (f: string) => `https://colab.research.google.com/github/daviddiazsol
 const NOTEBOOKS = [
   { k: 'nb1', es: '05_Riesgo_de_Credito_Regresion_Logistica.ipynb', en: '05_Riesgo_de_Credito_Regresion_Logistica_EN.ipynb' },
   { k: 'nb2', es: '06_Riesgo_de_Credito_Taiwan_Mas_Alla_de_la_Logistica.ipynb', en: '06_Riesgo_de_Credito_Taiwan_Mas_Alla_de_la_Logistica_EN.ipynb' },
+  { k: 'nb3', es: '07_Calibracion_de_Probabilidades.ipynb', en: '07_Calibracion_de_Probabilidades_EN.ipynb' },
 ]
 // Cada planilla existe en español (es) y en inglés (en); el botón principal descarga la del idioma activo.
 const EXCELS = [

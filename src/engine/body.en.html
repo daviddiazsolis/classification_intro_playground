@@ -10,6 +10,7 @@
   <button type="button" data-m="bal"><span>08</span>Class imbalance</button>
   <button type="button" data-m="mue"><span>09</span>Sampling variation</button>
   <button type="button" data-m="tw"><span>10</span>Taiwan: beyond logistic regression</button>
+  <button type="button" data-m="cal"><span>11</span>Probability calibration</button>
 </nav>
 
 <!-- ===================== 01 RECTA ===================== -->
@@ -155,6 +156,7 @@
 <div class="modelo" id="m-roc">
 <div class="controls">
   <div class="ctrl" data-pasos="0,1"><label for="roc-u">Threshold: <b id="roc-u-v">0.50</b></label><input type="range" id="roc-u" min="0" max="100" value="50" style="width:240px"></div>
+  <div class="ctrl" data-pasos="3"><label for="roc-fpr">False positive rate you tolerate: <b id="roc-fpr-v">10%</b></label><input type="range" id="roc-fpr" min="1" max="60" value="10" style="width:240px"></div>
   <div class="ctrl"><label>&nbsp;</label><button type="button" id="roc-replay">Replay animation</button></div>
 </div>
 <nav class="rail" id="roc-rail"></nav>
@@ -176,6 +178,13 @@
   <p>The AUC summarizes how far the curve is from the diagonal. It can be computed as a sum of trapezoids over the 21 points in the table, or exactly by using each of the 300 testing scores as a threshold. A complementary reading worth knowing: the AUC is the probability that, picking a bad payer and a good payer at random, the model assigned more risk to the bad one. It is useful for comparing models without fixing a threshold, but it hides the trade-off: when two ROC curves cross, a single number decides nothing, and you have to look at the curve in the range of thresholds the business is going to use.</p>
   <div class="flow" id="roc-auc"></div>
   <p class="note">An honest detail: here the testing AUC (0.822) comes out higher than the training AUC (0.777). That is not the usual case and it does not mean the model generalizes better than what it learned: with 300 testing clients the AUC has a sampling error of several points, and in tab 09 we measure it.</p>
+</section>
+<section class="panel" id="roc-s3">
+  <h2>Comparing models with the curve, not only with the AUC</h2>
+  <p>The AUC is a single number for the whole curve, and the whole curve includes zones where you will never operate: nobody approves loans while flagging 80% of the good payers. When you compare two models, what matters is the recall each one gives you <b>at the false positive rate your business tolerates</b>: a conservative bank stops at 5% or 10% of good customers rejected; a cheap collections campaign can go to 40%. Two curves can have almost the same AUC and cross: one wins on the left (few false positives) and the other on the right. In that case the AUC ties and the curve decides.</p>
+  <p>To see it, three logistic regressions are trained live here on the same split: the full one with 18 columns, one that uses only the 14 zero/one columns (checking account, history, savings, housing, purpose) and another that uses only the 4 numeric ones. Move the false positive tolerance and watch two things: each model's recall right at that rate, and the <b>partial AUC</b>, the area under the curve only up to that rate, which is the way to summarize the curve over the zone you care about instead of the whole thing.</p>
+  <div class="flow" id="roc-cmp"></div>
+  <p class="note" id="roc-cmp-nota"></p>
 </section>
 <div class="nav"><button type="button" id="roc-prev">Previous</button><button type="button" id="roc-next">Next</button></div>
 </div>
@@ -308,6 +317,9 @@
 <!-- ===================== 10 TAIWAN ===================== -->
 <div class="modelo" id="m-tw">
 <div class="controls">
+  <div class="ctrl" data-pasos="5"><label for="tw-fpr">False positive rate you tolerate: <b id="tw-fpr-v">5%</b></label><input type="range" id="tw-fpr" min="1" max="60" value="5" style="width:220px"></div>
+  <div class="ctrl" data-pasos="5"><label>Zoom</label><div class="seg" id="tw-zoom"><button type="button" data-z="1" aria-pressed="true">Operating zone</button><button type="button" data-z="0" aria-pressed="false">Whole curve</button></div></div>
+  <div class="ctrl" data-pasos="5" style="flex:1 1 100%"><label>Models on the chart</label><div class="seg" id="tw-mod"><button type="button" data-n="logistica lineal" aria-pressed="true">logistic</button><button type="button" data-n="logistica grado 2 sin regularizar" aria-pressed="false">degree 2 free</button><button type="button" data-n="logistica grado 2 regularizada" aria-pressed="true">degree 2 L2</button><button type="button" data-n="arbol profundidad 4" aria-pressed="true">tree depth 4</button><button type="button" data-n="arbol sin limite" aria-pressed="false">tree no limit</button><button type="button" data-n="random forest 300" aria-pressed="true">random forest</button><button type="button" data-n="gradient boosting 300" aria-pressed="true">boosting</button></div></div>
   <div class="ctrl"><label>&nbsp;</label><button type="button" id="tw-replay">Replay animation</button></div>
 </div>
 <nav class="rail" id="tw-rail"></nav>
@@ -346,6 +358,68 @@
   <div class="flow" id="tw-esc"></div>
   <p class="note">An AUC is not a decision. To use the winner you have to set the threshold with costs, as in tab 06, and check the calibration: with \(c_{FN} = 4\) and \(c_{FP} = 1\), the formula says 0.20 and the table over 9,000 customers also gives 0.20 for boosting (which is well calibrated) and 0.25 for logistic regression (which spreads out as a ramp what reality concentrates in a step). Notebook 06 has that full closing.</p>
 </section>
+
+<section class="panel" id="tw-s5">
+  <h2>ROC curves: when the AUC ties, the curve decides</h2>
+  <p>The table in the previous step ranks the models by AUC, and the AUC is an average over the whole curve. But a bank does not operate on the whole curve: it operates at one point, the one set by its tolerance for rejecting good customers. A conservative card issuer stops at 5% false positives; a preventive collections campaign, where flagging too many only costs a phone call, can go to 30% or 40%. Two models with almost equal AUC can cross: one wins on the left and the other on the right, and then the right question is not "which one has more AUC" but "which one catches more defaulters at <b>my</b> false positive rate".</p>
+  <p>Here are the seven curves of the models in this tab, computed on the 9,000 testing customers. Move the tolerance and read the table: each model's recall right at that rate and the <b>partial AUC</b> (the area only up to that rate, divided by its width), which is the honest summary when you know where you will operate. The zoom crops the chart to the operating zone, which is where the curves differ; over the whole curve they look almost the same.</p>
+  <div class="flow" id="tw-roc"></div>
+  <p class="note" id="tw-roc-nota"></p>
+</section>
 <div class="nav"><button type="button" id="tw-prev">Previous</button><button type="button" id="tw-next">Next</button></div>
+</div>
+
+<!-- ===================== 11 CALIBRATION ===================== -->
+<div class="modelo" id="m-cal">
+<div class="controls">
+  <div class="ctrl" data-pasos="0,1"><label>Groups in the diagram</label><div class="seg" id="cal-k"><button type="button" data-k="5" aria-pressed="false">5 quintiles</button><button type="button" data-k="10" aria-pressed="true">10 deciles</button></div></div>
+  <div class="ctrl" data-pasos="2"><label for="cal-c">Constant subtracted from the logit: <b id="cal-c-v">0.85</b></label><input type="range" id="cal-c" min="0" max="150" value="85" style="width:220px"></div>
+  <div class="ctrl" data-pasos="3" style="flex:1 1 100%"><label>Model (Taiwan)</label><div class="seg" id="cal-mod"><button type="button" data-n="logit" aria-pressed="true">logistic</button><button type="button" data-n="arbol_libre" aria-pressed="false">unlimited tree</button><button type="button" data-n="arbol_4" aria-pressed="false">tree, depth 4</button><button type="button" data-n="rf1" aria-pressed="false">random forest, leaves of 1</button><button type="button" data-n="rf5" aria-pressed="false">random forest, leaves of 5</button><button type="button" data-n="gb" aria-pressed="false">boosting</button></div></div>
+  <div class="ctrl" data-pasos="3"><label>Correction</label><div class="seg" id="cal-met"><button type="button" data-c="platt" aria-pressed="true">Platt</button><button type="button" data-c="iso" aria-pressed="false">Isotonic</button></div></div>
+  <div class="ctrl" data-pasos="4"><label for="cal-fn">Cost of a false negative (false positive = 1): <b id="cal-fn-v">5</b></label><input type="range" id="cal-fn" min="1" max="10" value="5" style="width:200px"></div>
+  <div class="ctrl"><label>&nbsp;</label><button type="button" id="cal-replay">Replay animation</button></div>
+</div>
+<nav class="rail" id="cal-rail"></nav>
+
+<section class="panel" id="cal-s0">
+  <h2>When the model says 30%, it has to be 30%</h2>
+  <p>A classifier does two different things: it <b>ranks</b> the clients (riskiest on top) and it puts a <b>number</b> on them. The AUC of tab 05 measures only the first. Calibration measures the second: if I take every client the model gave 30%, do 30% of them default? To approve or reject with any given threshold, ranking well is enough; to set the threshold from costs (tab 06), to provision, to charge a rate according to risk or to add up the risks of a portfolio, the number has to mean what it says.</p>
+  <p>How to look at it: sort the testing clients by probability, split them into groups of equal size, and in each group compare the average probability with the fraction that actually defaulted. Those points against the diagonal are the <b>reliability diagram</b>: on the diagonal, calibrated; below it, the model exaggerates the risk; above it, it understates it. Three numbers summarize it: the <b>Brier</b> score (mean squared error of the probability against the 0/1 outcome), the <b>log loss</b> (the loss of tab 02, which punishes confident mistakes) and the <b>ECE</b>, the average distance between the points and the diagonal, weighted by the size of each group. None of the three changes the AUC, and the AUC does not change under any increasing transformation of the probabilities: that is why two models can have the same AUC and very different calibrations.</p>
+  <div class="flow" id="cal-diag"></div>
+  <p class="note" id="cal-diag-nota"></p>
+</section>
+
+<section class="panel" id="cal-s1">
+  <h2>Why it is lost: balancing the classes</h2>
+  <p>In tab 08 we corrected the class imbalance with class weights (weight 1.667 for the bad payers and 0.714 for the good ones) and the recall went up. The price, which we stated but did not show, is that the model learns from a fictitious population where bad payers are 50%, and it returns the probabilities of that fictitious population: the order barely changes (same AUC), but every number is inflated. The same happens with undersampling and oversampling, because repeating or dropping rows is weighting them. It is not a defect of balancing: it is its logical consequence, because we changed the model's base rate.</p>
+  <p>There are two other causes that do not depend on weights. The <b>shape of the model</b>: a linear logistic assumes that the log odds are linear in the variables, and if reality has steps (like the payment delay in Taiwan, tab 10) it draws a ramp that runs above reality on one stretch and below it on another. And <b>trees and ensembles, by construction</b>: an unlimited tree predicts 0 or 1, and a random forest averages trees that memorized. Those two show up in step 4.</p>
+  <div class="flow" id="cal-bal"></div>
+  <p class="note" id="cal-bal-nota"></p>
+</section>
+
+<section class="panel" id="cal-s2">
+  <h2>The exact correction: subtract a constant from the logit</h2>
+  <p>When the miscalibration comes from having weighted the classes, the logistic has a fix that needs not a single extra data point. Weighting class 1 by \(w_1\) and class 0 by \(w_0\) is equivalent to training on a population where the prior odds of being positive were multiplied by \(w_1 / w_0\), and in a logistic that shifts only the intercept: the logit of the balanced model is the true logit plus \(\ln(w_1 / w_0)\). To return to the real population, subtract that constant:</p>
+  <p>\[ z_{\text{corrected}} = z_{\text{balanced}} - \ln\frac{w_1}{w_0}, \qquad p_{\text{corrected}} = \frac{1}{1 + e^{-z_{\text{corrected}}}} \]</p>
+  <p>With balanced class weights the ratio is \(w_1 / w_0 = n_0 / n_1 = 490 / 210 = 2.333\) and the constant is \(\ln 2.333 = 0.847\). With oversampling of the minority repeated \(k\) times, the constant is \(\ln k\); with undersampling that keeps \(n_0'\) good payers, \(\ln(n_0 / n_0')\). Subtracting a constant does not change the order, so the AUC stays the same and only the level is corrected (King and Zeng, 2001). Move the slider and watch where the Brier and the ECE bottom out: it is right at 0.847, there is nothing to search for.</p>
+  <div class="flow" id="cal-corr"></div>
+  <p class="note" id="cal-corr-nota"></p>
+</section>
+
+<section class="panel" id="cal-s3">
+  <h2>The general correction: Platt scaling and isotonic regression</h2>
+  <p>When the cause is not a known weight (a misspecified logistic, a tree, a model that comes from somewhere else) there is no constant to subtract. The general solution is to <b>learn a function that translates the model's scores into real probabilities</b>, using labeled data the model never saw. <b>Platt scaling</b> (1999) is a logistic with a single input, the model's logit: \(p = 1 / (1 + e^{-(a z + b)})\). Two parameters, so it works with little data, and it can only stretch, compress and shift: it fixes a model that is uniformly too confident or too timid, but not a ramp against a staircase. <b>Isotonic regression</b> (Zadrozny and Elkan, 2002) is the increasing step function that best fits the actual fraction against the score: no fixed shape, so it corrects any monotone deformation, but it needs thousands of rows.</p>
+  <p>The non-negotiable rule: the calibration function is fitted on rows the model did not use for training and that are not testing. That is why the Taiwan models in this step were trained on 70% of training (14,700 <b>fitting</b> clients), the calibration function was learned on the other 30% (6,300 <b>calibration</b> clients) and everything is measured on the 9,000 testing clients. In scikit-learn, <code>CalibratedClassifierCV(model, method="sigmoid" | "isotonic", cv=5)</code> does this by cross-validation and also averages the five models. Everything in this step is precomputed in Python; notebook 07 reproduces it in full.</p>
+  <div class="flow" id="cal-tw"></div>
+  <p class="note" id="cal-tw-nota"></p>
+</section>
+
+<section class="panel" id="cal-s4">
+  <h2>What changes in the decision: the cost formula works again</h2>
+  <p>In tab 06 we saw that with a false negative five times as expensive as a false positive the <b>formula</b> threshold is \(c_{FP} / (c_{FP} + c_{FN}) = 1/6 = 0.167\), and that the <b>table</b> on testing gave a different number. One of the reasons was calibration: the formula assumes that \(p\) is the true probability of default, and if \(p\) is inflated, it cuts where it should not. Here it is checked live with the balanced model before and after the intercept correction: move the cost of the false negative and compare, for each model, the cost paid by cutting where the formula says with the minimum the table finds by trying every threshold.</p>
+  <div class="flow" id="cal-dec"></div>
+  <p class="note" id="cal-dec-nota"></p>
+</section>
+<div class="nav"><button type="button" id="cal-prev">Previous</button><button type="button" id="cal-next">Next</button></div>
 </div>
 </div>
